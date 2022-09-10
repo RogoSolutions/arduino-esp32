@@ -133,6 +133,87 @@ set(LIBRARY_SRCS
   libraries/WiFi/src/WiFiUdp.cpp
   libraries/WiFiProv/src/WiFiProv.cpp
   libraries/Wire/src/Wire.cpp
+  libraries/IRremoteESP8266/src/IRac.cpp
+  libraries/IRremoteESP8266/src/IRrecv.cpp
+  libraries/IRremoteESP8266/src/IRsend.cpp
+  libraries/IRremoteESP8266/src/IRtext.cpp
+  libraries/IRremoteESP8266/src/IRtimer.cpp
+  libraries/IRremoteESP8266/src/IRutils.cpp
+  libraries/IRremoteESP8266/src/ir_Airton.cpp
+  libraries/IRremoteESP8266/src/ir_Airwell.cpp
+  libraries/IRremoteESP8266/src/ir_Aiwa.cpp
+  libraries/IRremoteESP8266/src/ir_Amcor.cpp
+  libraries/IRremoteESP8266/src/ir_Argo.cpp
+  libraries/IRremoteESP8266/src/ir_Arris.cpp
+  #libraries/IRremoteESP8266/src/ir_Bosch.cpp
+  libraries/IRremoteESP8266/src/ir_Bose.cpp
+  libraries/IRremoteESP8266/src/ir_Carrier.cpp
+  #libraries/IRremoteESP8266/src/ir_ClimaButler.cpp
+  libraries/IRremoteESP8266/src/ir_Coolix.cpp
+  libraries/IRremoteESP8266/src/ir_Corona.cpp
+  libraries/IRremoteESP8266/src/ir_Daikin.cpp
+  libraries/IRremoteESP8266/src/ir_Delonghi.cpp
+  libraries/IRremoteESP8266/src/ir_Denon.cpp
+  libraries/IRremoteESP8266/src/ir_Dish.cpp
+  libraries/IRremoteESP8266/src/ir_Doshisha.cpp
+  libraries/IRremoteESP8266/src/ir_Ecoclim.cpp
+  libraries/IRremoteESP8266/src/ir_Electra.cpp
+  libraries/IRremoteESP8266/src/ir_EliteScreens.cpp
+  libraries/IRremoteESP8266/src/ir_Epson.cpp
+  libraries/IRremoteESP8266/src/ir_Fujitsu.cpp
+  libraries/IRremoteESP8266/src/ir_GICable.cpp
+  libraries/IRremoteESP8266/src/ir_GlobalCache.cpp
+  libraries/IRremoteESP8266/src/ir_Goodweather.cpp
+  libraries/IRremoteESP8266/src/ir_Gree.cpp
+  libraries/IRremoteESP8266/src/ir_Haier.cpp
+  libraries/IRremoteESP8266/src/ir_Hitachi.cpp
+  libraries/IRremoteESP8266/src/ir_Inax.cpp
+  libraries/IRremoteESP8266/src/ir_JVC.cpp
+  libraries/IRremoteESP8266/src/ir_Kelon.cpp
+  libraries/IRremoteESP8266/src/ir_Kelvinator.cpp
+  libraries/IRremoteESP8266/src/ir_LG.cpp
+  libraries/IRremoteESP8266/src/ir_Lasertag.cpp
+  libraries/IRremoteESP8266/src/ir_Lego.cpp
+  libraries/IRremoteESP8266/src/ir_Lutron.cpp
+  libraries/IRremoteESP8266/src/ir_MWM.cpp
+  libraries/IRremoteESP8266/src/ir_Magiquest.cpp
+  libraries/IRremoteESP8266/src/ir_Metz.cpp
+  libraries/IRremoteESP8266/src/ir_Midea.cpp
+  libraries/IRremoteESP8266/src/ir_MilesTag2.cpp
+  libraries/IRremoteESP8266/src/ir_Mirage.cpp
+  libraries/IRremoteESP8266/src/ir_Mitsubishi.cpp
+  libraries/IRremoteESP8266/src/ir_MitsubishiHeavy.cpp
+  libraries/IRremoteESP8266/src/ir_Multibrackets.cpp
+  libraries/IRremoteESP8266/src/ir_NEC.cpp
+  libraries/IRremoteESP8266/src/ir_Neoclima.cpp
+  libraries/IRremoteESP8266/src/ir_Nikai.cpp
+  libraries/IRremoteESP8266/src/ir_Panasonic.cpp
+  libraries/IRremoteESP8266/src/ir_Pioneer.cpp
+  libraries/IRremoteESP8266/src/ir_Pronto.cpp
+  libraries/IRremoteESP8266/src/ir_RC5_RC6.cpp
+  libraries/IRremoteESP8266/src/ir_RCMM.cpp
+  libraries/IRremoteESP8266/src/ir_Rhoss.cpp
+  libraries/IRremoteESP8266/src/ir_Samsung.cpp
+  libraries/IRremoteESP8266/src/ir_Sanyo.cpp
+  libraries/IRremoteESP8266/src/ir_Sharp.cpp
+  libraries/IRremoteESP8266/src/ir_Sherwood.cpp
+  libraries/IRremoteESP8266/src/ir_Sony.cpp
+  libraries/IRremoteESP8266/src/ir_Symphony.cpp
+  libraries/IRremoteESP8266/src/ir_Tcl.cpp
+  libraries/IRremoteESP8266/src/ir_Technibel.cpp
+  libraries/IRremoteESP8266/src/ir_Teco.cpp
+  libraries/IRremoteESP8266/src/ir_Teknopoint.cpp
+  libraries/IRremoteESP8266/src/ir_Toshiba.cpp
+  #libraries/IRremoteESP8266/src/ir_Toto.cpp
+  libraries/IRremoteESP8266/src/ir_Transcold.cpp
+  libraries/IRremoteESP8266/src/ir_Trotec.cpp
+  libraries/IRremoteESP8266/src/ir_Truma.cpp
+  libraries/IRremoteESP8266/src/ir_Vestel.cpp
+  libraries/IRremoteESP8266/src/ir_Voltas.cpp
+  libraries/IRremoteESP8266/src/ir_Whirlpool.cpp
+  libraries/IRremoteESP8266/src/ir_Whynter.cpp
+  libraries/IRremoteESP8266/src/ir_Xmp.cpp
+  libraries/IRremoteESP8266/src/ir_Zepeal.cpp
   )
 
 set(BLE_SRCS
@@ -201,6 +282,7 @@ set(includedirs
   libraries/WiFi/src
   libraries/WiFiProv/src
   libraries/Wire/src
+  libraries/IRremoteESP8266/src
   )
 
 set(srcs ${CORE_SRCS} ${LIBRARY_SRCS} ${BLE_SRCS})
