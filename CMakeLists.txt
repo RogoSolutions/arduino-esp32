@@ -145,10 +145,10 @@ set(LIBRARY_SRCS
   libraries/IRremoteESP8266/src/ir_Amcor.cpp
   libraries/IRremoteESP8266/src/ir_Argo.cpp
   libraries/IRremoteESP8266/src/ir_Arris.cpp
-  #libraries/IRremoteESP8266/src/ir_Bosch.cpp
+  libraries/IRremoteESP8266/src/ir_Bosch.cpp
   libraries/IRremoteESP8266/src/ir_Bose.cpp
   libraries/IRremoteESP8266/src/ir_Carrier.cpp
-  #libraries/IRremoteESP8266/src/ir_ClimaButler.cpp
+  libraries/IRremoteESP8266/src/ir_ClimaButler.cpp
   libraries/IRremoteESP8266/src/ir_Coolix.cpp
   libraries/IRremoteESP8266/src/ir_Corona.cpp
   libraries/IRremoteESP8266/src/ir_Daikin.cpp
@@ -204,7 +204,7 @@ set(LIBRARY_SRCS
   libraries/IRremoteESP8266/src/ir_Teco.cpp
   libraries/IRremoteESP8266/src/ir_Teknopoint.cpp
   libraries/IRremoteESP8266/src/ir_Toshiba.cpp
-  #libraries/IRremoteESP8266/src/ir_Toto.cpp
+  libraries/IRremoteESP8266/src/ir_Toto.cpp
   libraries/IRremoteESP8266/src/ir_Transcold.cpp
   libraries/IRremoteESP8266/src/ir_Trotec.cpp
   libraries/IRremoteESP8266/src/ir_Truma.cpp

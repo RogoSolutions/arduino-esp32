@@ -550,11 +550,11 @@ void IRrecv::crudeNoiseFilter(decode_results *results, const uint16_t floor) {
 ///     150 - 200 usecs expect broken protocols.
 ///     At 200+ usecs, you **have** protocols you can't decode!!
 /// @return A boolean indicating if an IR message is ready or not.
-bool IRrecv::decode(decode_results *results, irparams_t *save,
+bool IRrecv::decode(decode_results *results, uint8_t source, irparams_t *save,
                     uint8_t max_skip, uint16_t noise_floor) {
   // Proceed only if an IR message been received.
 #ifndef UNIT_TEST
-  if (params.rcvstate != kStopState) return false;
+  if (source == RAW_FROM_HW && params.rcvstate != kStopState) return false;
 #endif
 
   // Clear the entry we are currently pointing to when we got the timeout.
@@ -570,6 +570,8 @@ bool IRrecv::decode(decode_results *results, irparams_t *save,
   if (!params.overflow) params.rawbuf[params.rawlen] = 0;
 
   bool resumed = false;  // Flag indicating if we have resumed.
+
+  if (source == RAW_FROM_SW) goto decode;
 
   // If we were requested to use a save buffer previously, do so.
   if (save == NULL) save = params_save;
@@ -591,6 +593,7 @@ bool IRrecv::decode(decode_results *results, irparams_t *save,
     results->overflow = save->overflow;
   }
 
+decode:
   // Reset any previously partially processed results.
   results->decode_type = UNKNOWN;
   results->bits = 0;

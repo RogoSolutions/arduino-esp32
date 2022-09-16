@@ -14,6 +14,9 @@
 #include <stdint.h>
 #include "IRremoteESP8266.h"
 
+#define RAW_FROM_HW 0
+#define RAW_FROM_SW 1
+
 // Constants
 const uint16_t kHeader = 2;        // Usual nr. of header entries.
 const uint16_t kFooter = 2;        // Usual nr. of footer (stop bits) entries.
@@ -133,7 +136,7 @@ class IRrecv {
   ~IRrecv(void);                                                  // Destructor
   void setTolerance(const uint8_t percent = kTolerance);
   uint8_t getTolerance(void);
-  bool decode(decode_results *results, irparams_t *save = NULL,
+  bool decode(decode_results *results, uint8_t source = RAW_FROM_HW, irparams_t *save = NULL,
               uint8_t max_skip = 0, uint16_t noise_floor = 0);
   void enableIRIn(const bool pullup = false);
   void disableIRIn(void);
