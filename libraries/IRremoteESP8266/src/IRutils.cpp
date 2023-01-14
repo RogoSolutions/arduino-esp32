@@ -1312,3 +1312,32 @@ namespace irutils {
     return result;
   }
 }  // namespace irutils
+
+
+/* Ninh.D.H 2023.1.12 **********************************************************/
+#ifdef RAW_SAVE
+
+void freeRawSave(){
+  if (rawSave != NULL){
+    free(rawSave);
+    rawSave = NULL;
+  }
+}
+
+void getRawSave(uint16_t **rawSaveData, uint16_t *rawLen){
+  *rawLen = rawSaveLen;
+  // uint16_t *rawSaveData = (uint16_t *)malloc(*rawLen);
+  if (*rawSaveData != NULL){
+    free(*rawSaveData);
+    *rawSaveData = NULL;
+  }
+  *rawSaveData = (uint16_t *)calloc(rawSaveLen, sizeof(uint16_t));
+  for (uint16_t i=0; i<rawSaveLen; i++){
+    // *(*rawSaveData+i) = rawSave[i];
+    memcpy(*rawSaveData+i, rawSave+i, sizeof(uint16_t));
+  }
+  freeRawSave();
+}
+
+#endif
+/*******************************************************************************/

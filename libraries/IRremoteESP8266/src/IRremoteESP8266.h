@@ -1446,6 +1446,13 @@ const uint16_t kClimaButlerBits = 52;
 
 // Turn on Debugging information by uncommenting the following line.
 // #define DEBUG 1
+#define RAW_SAVE 1
+
+#ifdef RAW_SAVE
+#include <cstddef>
+extern uint16_t *rawSave;
+extern uint16_t rawSaveLen;
+#endif
 
 #ifdef DEBUG
 #ifdef UNIT_TEST

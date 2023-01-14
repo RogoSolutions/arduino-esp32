@@ -43,6 +43,14 @@ uint64_t invertBits(const uint64_t data, const uint16_t nbits);
 decode_type_t strToDecodeType(const char *str);
 float celsiusToFahrenheit(const float deg);
 float fahrenheitToCelsius(const float deg);
+
+/* Ninh.D.H 2023.1.12 **********************************************************/
+#ifdef RAW_SAVE
+void freeRawSave();
+void getRawSave(uint16_t **rawSaveData, uint16_t *rawLen);
+#endif
+/*******************************************************************************/
+
 /// Namespace for covering common functions & procedures for advancd protocol
 /// handlers
 namespace irutils {

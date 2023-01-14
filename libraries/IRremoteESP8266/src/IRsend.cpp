@@ -141,6 +141,11 @@ void IRsend::_delayMicroseconds(uint32_t usec) {
 }
 #endif  // ALLOW_DELAY_CALLS
 
+#ifdef RAW_SAVE
+uint16_t *rawSave = NULL;
+uint16_t rawSaveLen = 0;
+#endif
+
 /// Modulate the IR LED for the given period (usec) and at the duty cycle set.
 /// @param[in] usec The period of time to modulate the IR LED for, in
 ///  microseconds.
@@ -155,6 +160,19 @@ void IRsend::_delayMicroseconds(uint32_t usec) {
 /// Ref:
 ///   https://www.analysir.com/blog/2017/01/29/updated-esp8266-nodemcu-backdoor-upwm-hack-for-ir-signals/
 uint16_t IRsend::mark(uint16_t usec) {
+
+  #ifdef RAW_SAVE
+  if (rawSave == NULL){
+    rawSave = (uint16_t *)malloc(sizeof(uint16_t));
+    rawSaveLen = 1;
+  }
+  else{
+    rawSaveLen++;
+    rawSave = (uint16_t *)realloc(rawSave, rawSaveLen*sizeof(uint16_t));
+  }
+  rawSave[rawSaveLen-1] = usec;
+  #endif
+
   // Handle the simple case of no required frequency modulation.
   if (!modulation || _dutycycle >= 100) {
     ledOn();
@@ -192,6 +210,18 @@ uint16_t IRsend::mark(uint16_t usec) {
 /// A space is no output, so the PWM output is disabled.
 /// @param[in] time Time in microseconds (us).
 void IRsend::space(uint32_t time) {
+  #ifdef RAW_SAVE
+  if (rawSave == NULL){
+    rawSave = (uint16_t *)malloc(sizeof(uint16_t));
+    rawSaveLen = 1;
+  }
+  else{
+    rawSaveLen++;
+    rawSave = (uint16_t *)realloc(rawSave, rawSaveLen*sizeof(uint16_t));
+  }
+  rawSave[rawSaveLen-1] = (uint16_t)time;
+  #endif
+
   ledOff();
   if (time == 0) return;
   _delayMicroseconds(time);
