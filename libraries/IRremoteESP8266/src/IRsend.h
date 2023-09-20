@@ -837,6 +837,11 @@ class IRsend {
                     const uint16_t nbytes = kBosch144StateLength,
                     const uint16_t repeat = kNoRepeat);
 #endif  // SEND_BOSCH144
+#if SEND_MITSUBISHIHEAVY160
+  void sendMitsubishiHeavy160(const unsigned char data[],
+                              const uint16_t nbytes = kMitsubishiHeavy160StateLength,
+                              const uint16_t repeat = kMitsubishiHeavy160MinRepeat);
+#endif //SEND_MITSUBISHIHEAVY160
 
  protected:
 #ifdef UNIT_TEST

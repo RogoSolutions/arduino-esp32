@@ -533,6 +533,10 @@ IRTEXT_CONST_BLOB_DECL(kAllProtocolNamesStr) {
             D_STR_SANYO_AC152, D_STR_UNSUPPORTED) "\x0"
     COND(DECODE_DAIKIN312 || SEND_DAIKIN312,
             D_STR_DAIKIN312, D_STR_UNSUPPORTED) "\x0"
+    /* Ninh.D.H 18.09.2023 *********************************/
+    COND(DECODE_MITSUBISHIHEAVY160 || SEND_MITSUBISHIHEAVY160,
+            D_STR_MITSUBISHI_HEAVY_160, D_STR_UNSUPPORTED) "\x0"
+    /*******************************************************/
     ///< New protocol (macro) strings should be added just above this line.
     "\x0"  ///< This string requires double null termination.
 };

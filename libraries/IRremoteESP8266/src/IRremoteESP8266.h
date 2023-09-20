@@ -924,6 +924,15 @@
 #define SEND_DAIKIN312      _IR_ENABLE_DEFAULT_
 #endif  // SEND_DAIKIN312
 
+/* Ninh.D.H 18.09.2023 *********************************/
+#ifndef DECODE_MITSUBISHIHEAVY160
+#define DECODE_MITSUBISHIHEAVY160    _IR_ENABLE_DEFAULT_
+#endif  // DECODE_MITSUBISHIHEAVY160
+#ifndef SEND_MITSUBISHIHEAVY160
+#define SEND_MITSUBISHIHEAVY160      _IR_ENABLE_DEFAULT_
+#endif  // SEND_MITSUBISHIHEAVY160
+/*******************************************************/
+
 #if (DECODE_ARGO || DECODE_DAIKIN || DECODE_FUJITSU_AC || DECODE_GREE || \
      DECODE_KELVINATOR || DECODE_MITSUBISHI_AC || DECODE_TOSHIBA_AC || \
      DECODE_TROTEC || DECODE_HAIER_AC || DECODE_HITACHI_AC || \
@@ -942,6 +951,7 @@
      DECODE_KELON168 || DECODE_HITACHI_AC296 || DECODE_CARRIER_AC128 || \
      DECODE_DAIKIN200 || DECODE_HAIER_AC160 || DECODE_TCL96AC || \
      DECODE_BOSCH144 || DECODE_SANYO_AC152 || DECODE_DAIKIN312 || \
+     DECODE_MITSUBISHIHEAVY160 || \
      false)
   // Add any DECODE to the above if it uses result->state (see kStateSizeMax)
   // you might also want to add the protocol to hasACState function
@@ -1104,8 +1114,11 @@ enum decode_type_t {
   BOSCH144,  // 120
   SANYO_AC152,
   DAIKIN312,
+  /* Ninh.D.H 18.09.2023 *****************************************************/
+  MITSUBISHI_HEAVY_160 = 200,
   // Add new entries before this one, and update it to point to the last entry.
-  kLastDecodeType = DAIKIN312,
+  kLastDecodeType = MITSUBISHI_HEAVY_160,
+  /***************************************************************************/
 };
 
 // Message lengths & required repeat values
@@ -1283,6 +1296,11 @@ const uint16_t kMitsubishiHeavy88MinRepeat = kNoRepeat;
 const uint16_t kMitsubishiHeavy152StateLength = 19;
 const uint16_t kMitsubishiHeavy152Bits = kMitsubishiHeavy152StateLength * 8;
 const uint16_t kMitsubishiHeavy152MinRepeat = kNoRepeat;
+/* Ninh.D.H 18.09.2023 ****************************************************/
+const uint16_t kMitsubishiHeavy160StateLength = 20;
+const uint16_t kMitsubishiHeavy160Bits = kMitsubishiHeavy160StateLength * 8;
+const uint16_t kMitsubishiHeavy160MinRepeat = kNoRepeat;
+/**************************************************************************/
 const uint16_t kMultibracketsBits = 8;
 const uint16_t kMultibracketsDefaultRepeat = kSingleRepeat;
 const uint16_t kNikaiBits = 24;

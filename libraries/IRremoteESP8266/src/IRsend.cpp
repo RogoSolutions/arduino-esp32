@@ -1437,6 +1437,13 @@ bool IRsend::send(const decode_type_t type, const uint8_t *state,
       sendWhirlpoolAC(state, nbytes);
       break;
 #endif  // SEND_WHIRLPOOL_AC
+/* Ninh.D.H 18.09.2023 *********************************/
+#if SEND_MITSUBISHIHEAVY160
+    case MITSUBISHI_HEAVY_160:
+      sendMitsubishiHeavy160(state, nbytes);
+      break;
+#endif  // SEND_MITSUBISHIHEAVY160
+/*******************************************************/
     default:
       return false;
   }

@@ -116,6 +116,101 @@ const uint8_t kMitsubishiHeavy152SwingHRightLeft = 6;  // 0b0110
 const uint8_t kMitsubishiHeavy152SwingHLeftRight = 7;  // 0b0111
 const uint8_t kMitsubishiHeavy152SwingHOff =       8;  // 0b1000
 
+
+/* Ninh.D.H 18.09.2023 ************************************************/
+const uint8_t kMitsubishiHeavy160Auto = 0;         // 0b000
+const uint8_t kMitsubishiHeavy160Dry  = 1;         // 0b001
+const uint8_t kMitsubishiHeavy160Cool = 2;         // 0b010
+const uint8_t kMitsubishiHeavy160Fan  = 3;         // 0b011
+const uint8_t kMitsubishiHeavy160Heat = 4;         // 0b100
+
+const uint8_t kMitsubishiHeavy160MinTemp = 16;   // 16C
+const uint8_t kMitsubishiHeavy160MaxTemp = 30;   // 30C
+
+const uint8_t kMitsubishiHeavy160FanAuto =  0x4;  // 0b0100 // 0x0;  // 0b0000
+const uint8_t kMitsubishiHeavy160FanLow  =  0x0;  // 0b0000 // 0x1;  // 0b0001
+const uint8_t kMitsubishiHeavy160FanMed  =  0x1;  // 0b0001 // 0x2;  // 0b0010
+const uint8_t kMitsubishiHeavy160FanHigh =  0x2;  // 0b0010 // 0x3;  // 0b0011
+const uint8_t kMitsubishiHeavy160FanMax  =  0x3;  // 0b0011 // 0x4;  // 0b0100
+const uint8_t kMitsubishiHeavy160FanEcono = 0x6;  // 0b0110
+const uint8_t kMitsubishiHeavy160FanTurbo = 0x8;  // 0b1000
+
+const uint8_t kMitsubishiHeavy160SwingVOff  =    0;
+const uint8_t kMitsubishiHeavy160SwingVAuto =    1;
+const uint8_t kMitsubishiHeavy160SwingVHighest = 0;
+const uint8_t kMitsubishiHeavy160SwingVHigh =    1;
+const uint8_t kMitsubishiHeavy160SwingVMiddle =  2;
+const uint8_t kMitsubishiHeavy160SwingVLow =     3;
+const uint8_t kMitsubishiHeavy160SwingVLowest =  3;
+
+const uint8_t kMitsubishiHeavy160SwingHOff =       0;
+const uint8_t kMitsubishiHeavy160SwingHAuto =      1;
+const uint8_t kMitsubishiHeavy160SwingHLeftMax =   1+7;  // 0b0001
+const uint8_t kMitsubishiHeavy160SwingHLeft =      2;  // 0b0010
+const uint8_t kMitsubishiHeavy160SwingHMiddle =    3;  // 0b0011
+const uint8_t kMitsubishiHeavy160SwingHRight =     4;  // 0b0100
+const uint8_t kMitsubishiHeavy160SwingHRightMax =  5;  // 0b0101
+const uint8_t kMitsubishiHeavy160SwingHRightLeft = 6;  // 0b0110
+const uint8_t kMitsubishiHeavy160SwingHLeftRight = 7;  // 0b0111
+
+union Mitsubishi160Protocol{
+  uint8_t raw[kMitsubishiHeavy160StateLength];  ///< State in code form
+  struct {  
+    // Byte 0
+    uint8_t Sig     :8; // 0x0D
+    // Byte 1
+    uint8_t         :6;
+    uint8_t SwingV  :1;
+    uint8_t SwingH  :1;
+    // Byte 2
+    uint8_t Temp    :4;
+    uint8_t Mode    :3;
+    uint8_t Power   :1;
+    // Byte 3
+    uint8_t WingH   :4;
+    uint8_t WingV   :4;
+    // Byte 4
+    uint8_t         :8;
+
+    // Byte 5 - Flip Byte 1
+    uint8_t           :6;
+    uint8_t SwingVFlip:1;
+    uint8_t           :1;
+    // Byte 6 - Flip Byte 2
+    uint8_t TempFlip  :4;
+    uint8_t ModeFlip  :3;
+    uint8_t PowerFlip :1;
+    // Byte 7 - Flip Byte 3
+    uint8_t WingHFlip :4;
+    uint8_t WingVFlip :4;
+    // Byte 8
+    uint8_t Fan     :4;
+    uint8_t         :4;
+    // Byte 9
+    uint8_t         :1; // b1
+    uint8_t         :6;
+    uint8_t Silent  :1;
+    // Byte 10
+    uint8_t         :6;
+    uint8_t Turbo   :1;
+    uint8_t Econo   :1;
+    // Byte 11
+    uint8_t         :8;
+    // Byte 12 - Flip Byte 8
+    uint8_t FanFlip   :4;
+    uint8_t           :4;
+    // Byte 13 - Flip Byte 9
+    uint8_t           :1;
+    uint8_t           :6;
+    uint8_t SlientFlip:1;
+    // Byte 14 - Flip Byte 10
+    uint8_t         :8;
+    // Byte 15
+    uint8_t         :8;
+  };
+};
+/******************************************************************************/
+
 /// Native representation of a Mitsubishi Heavy 88-bit A/C message.
 union Mitsubishi88Protocol{
   uint8_t raw[kMitsubishiHeavy88StateLength];  ///< State in code form
@@ -266,6 +361,95 @@ class IRMitsubishiHeavy152Ac {
   Mitsubishi152Protocol _;
   void checksum(void);
 };
+
+/* Ninh.D.H 18.09.2023 ******************************************************/
+class IRMitsubishiHeavy160Ac {
+ public:
+  explicit IRMitsubishiHeavy160Ac(const uint16_t pin,
+                                  const bool inverted = false,
+                                  const bool use_modulation = true);
+  void stateReset(void);
+#if SEND_MITSUBISHIHEAVY160
+  void send(const uint16_t repeat = kMitsubishiHeavy160MinRepeat);
+  /// Run the calibration to calculate uSec timing offsets for this platform.
+  /// @return The uSec timing offset needed per modulation of the IR Led.
+  /// @note This will produce a 65ms IR signal pulse at 38kHz.
+  ///   Only ever needs to be run once per object instantiation, if at all.
+  int8_t calibrate(void) { return _irsend.calibrate(); }
+#endif  // SEND_MITSUBISHIHEAVY160
+  void begin(void);
+  void on(void);
+  void off(void);
+
+  void setPower(const bool on);
+  bool getPower(void) const;
+
+  void setTemp(const uint8_t temp);
+  uint8_t getTemp(void) const;
+
+  void setFan(const uint8_t fan);
+  uint8_t getFan(void) const;
+
+  void setMode(const uint8_t mode);
+  uint8_t getMode(void) const;
+
+  void setSwingVertical(const stdAc::swingv_t pos);
+  uint8_t getSwingVertical(void) const;
+  void setSwingHorizontal(const stdAc::swingh_t pos);
+  uint8_t getSwingHorizontal(void) const;
+
+  void setNight(const bool on);
+  bool getNight(void) const;
+
+  void set3D(const bool on);
+  bool get3D(void) const;
+
+  void setSilent(const bool on);
+  bool getSilent(void) const;
+
+  void setFilter(const bool on);
+  bool getFilter(void) const;
+
+  void setClean(const bool on);
+  bool getClean(void) const;
+
+  void setTurbo(const bool on);
+  bool getTurbo(void) const;
+
+  void setEcono(const bool on);
+  bool getEcono(void) const;
+
+  uint8_t* getRaw(void);
+  void setRaw(const uint8_t* data);
+
+  static bool checkZmsSig(const uint8_t *state);
+  static bool validChecksum(
+      const uint8_t *state,
+      const uint16_t length = kMitsubishiHeavy152StateLength);
+  static uint8_t convertMode(const stdAc::opmode_t mode);
+  static uint8_t convertFan(const stdAc::fanspeed_t speed);
+  static uint8_t convertSwingV(const stdAc::swingv_t position);
+  static uint8_t convertSwingH(const stdAc::swingh_t position);
+  static stdAc::opmode_t toCommonMode(const uint8_t mode);
+  static stdAc::fanspeed_t toCommonFanSpeed(const uint8_t speed);
+  static stdAc::swingv_t getCommonSwingV(uint8_t isAuto, uint8_t pos);
+  static stdAc::swingh_t getCommonSwingH(uint8_t isAuto, uint8_t pos);
+  stdAc::state_t toCommon(void) const;
+  String toString(void) const;
+  void setFlipBit(void);
+#ifndef UNIT_TEST
+
+ private:
+  IRsend _irsend;  ///< Instance of the IR send class
+#else  // UNIT_TEST
+  /// @cond IGNORE
+  IRsendTest _irsend;  ///< Instance of the testing IR send class
+  /// @endcond
+#endif  // UNIT_TEST
+  Mitsubishi160Protocol _;
+  void checksum(void);
+};
+/******************************************************************************/
 
 /// Class for handling detailed Mitsubishi Heavy 88-bit A/C messages.
 class IRMitsubishiHeavy88Ac {

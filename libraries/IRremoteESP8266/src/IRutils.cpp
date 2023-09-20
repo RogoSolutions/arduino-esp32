@@ -224,6 +224,7 @@ bool hasACState(const decode_type_t protocol) {
     case TROTEC_3550:
     case VOLTAS:
     case WHIRLPOOL_AC:
+    case MITSUBISHI_HEAVY_160:
       return true;
     default:
       return false;

@@ -1066,6 +1066,11 @@ D_STR_INDIRECT " " D_STR_MODE
 #ifndef D_STR_ZEPEAL
 #define D_STR_ZEPEAL "ZEPEAL"
 #endif  // D_STR_ZEPEAL
+/* Ninh.D.H 18.09.2023 *********************************/
+#ifndef D_STR_MITSUBISHI_HEAVY_160
+#define D_STR_MITSUBISHI_HEAVY_160 "MITSUBISHI_HEAVY_160"
+#endif // D_STR_MITSUBISHI_HEAVY_160
+/*******************************************************/
 
 // IRrecvDumpV2+
 #ifndef D_STR_TIMESTAMP

@@ -860,6 +860,14 @@ class IRrecv {
                       const uint16_t nbits = kBosch144Bits,
                       const bool strict = true);
 #endif  // DECODE_BOSCH144
+/* Ninh.D.H 18.09.2023 *********************************/
+#if DECODE_MITSUBISHIHEAVY160
+  bool decodeMitsubishiHeavy160(decode_results *results,
+                          uint16_t offset = kStartOffset,
+                          const uint16_t nbits = kMitsubishiHeavy160Bits,
+                          const bool strict = false);
+#endif //DECODE_MITSUBISHIHEAVY160
+/*******************************************************/
 };
 
 #endif  // IRRECV_H_

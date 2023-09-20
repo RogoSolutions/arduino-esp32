@@ -332,6 +332,11 @@ bool IRac::isProtocolSupported(const decode_type_t protocol) {
 #if SEND_VOLTAS
     case decode_type_t::VOLTAS:
 #endif
+/* Ninh.D.H 18.09.2023 *********************************/
+#if SEND_MITSUBISHIHEAVY160
+    case decode_type_t::MITSUBISHI_HEAVY_160:
+#endif
+/*******************************************************/
     case decode_type_t::WHIRLPOOL_AC:
       return true;
     default:
@@ -1902,6 +1907,52 @@ void IRac::mitsubishiHeavy152(IRMitsubishiHeavy152Ac *ac,
 }
 #endif  // SEND_MITSUBISHIHEAVY
 
+/* Ninh.D.H 18.09.2023 *********************************************************/
+#if SEND_MITSUBISHIHEAVY160
+/// Send a Mitsubishi Heavy 160-bit A/C message with the supplied settings.
+/// @param[in, out] ac A Ptr to an IRMitsubishiHeavy160Ac object to use.
+/// @param[in] on The power setting.
+/// @param[in] mode The operation mode setting.
+/// @param[in] degrees The temperature setting in degrees.
+/// @param[in] fan The speed setting for the fan.
+/// @param[in] swingv The vertical swing setting.
+/// @param[in] swingh The horizontal swing setting.
+/// @param[in] quiet Run the device in quiet/silent mode.
+/// @param[in] turbo Run the device in turbo/powerful mode.
+/// @param[in] econo Run the device in economical mode.
+/// @param[in] filter Turn on the (ion/pollen/etc) filter mode.
+/// @param[in] clean Turn on the self-cleaning mode. e.g. Mould, dry filters etc
+/// @param[in] sleep Nr. of minutes for sleep mode. -1 is Off, >= 0 is on.
+void IRac::mitsubishiHeavy160(IRMitsubishiHeavy160Ac *ac,
+                              const bool on, const stdAc::opmode_t mode,
+                              const float degrees,
+                              const stdAc::fanspeed_t fan,
+                              const stdAc::swingv_t swingv,
+                              const stdAc::swingh_t swingh,
+                              const bool quiet, const bool turbo,
+                              const bool econo, const bool filter,
+                              const bool clean, const int16_t sleep) {
+  ac->begin();
+  ac->setPower(on);
+  ac->setMode(ac->convertMode(mode));
+  ac->setTemp(degrees);
+  ac->setFan(ac->convertFan(fan));
+  ac->setSwingVertical(swingv);
+  ac->setSwingHorizontal(swingh);
+  ac->setSilent(quiet);
+  ac->setTurbo(turbo);
+  // No Light setting available.
+  ac->setEcono(econo);
+  ac->setClean(clean);
+  ac->setFilter(filter);
+  // No Beep setting available.
+  ac->setNight(sleep >= 0);  // Sleep is either on/off, so convert to boolean.
+  // No Clock setting available.
+  ac->send();
+}
+#endif  // SEND_MITSUBISHIHEAVY160
+/******************************************************************************/
+
 #if SEND_NEOCLIMA
 /// Send a Neoclima A/C message with the supplied settings.
 /// @param[in, out] ac A Ptr to an IRNeoclimaAc object to use.
@@ -3391,6 +3442,18 @@ bool IRac::sendAc(const stdAc::state_t desired, const stdAc::state_t *prev) {
       break;
     }
 #endif  // SEND_TRANSCOLD_AC
+/* Ninh.D.H 18.09.2023 ***************************************************/
+#if SEND_MITSUBISHIHEAVY160
+    case MITSUBISHI_HEAVY_160:
+    {
+      IRMitsubishiHeavy160Ac ac(_pin, _inverted, _modulation);
+      mitsubishiHeavy160(&ac, send.power, send.mode, degC, send.fanspeed,
+                         send.swingv, send.swingh, send.quiet, send.turbo,
+                         send.econo, send.filter, send.clean, send.sleep);
+      break;
+    }
+#endif  // SEND_MITSUBISHIHEAVY160
+/*************************************************************************/
     default:
       return false;  // Fail, didn't match anything.
   }
@@ -4211,6 +4274,15 @@ namespace IRAcUtils {
         return ac.toString();
       }
 #endif  // DECODE_WHIRLPOOL_AC
+/* Ninh.D.H 18.09.2023 *********************************/
+#if DECODE_MITSUBISHIHEAVY160
+      case decode_type_t::MITSUBISHI_HEAVY_160: {
+        IRMitsubishiHeavy160Ac ac(kGpioUnused);
+        ac.setRaw(result->state);
+        return ac.toString();
+      }
+#endif  // DECODE_MITSUBISHIHEAVY160
+/*******************************************************/
       default:
         return "";
     }
@@ -4732,6 +4804,16 @@ namespace IRAcUtils {
         break;
       }
 #endif  // DECODE_WHIRLPOOL_AC
+/* Ninh.D.H 18.09.2023 *********************************/
+#if DECODE_MITSUBISHIHEAVY160
+      case decode_type_t::MITSUBISHI_HEAVY_160: {
+        IRMitsubishiHeavy160Ac ac(kGpioUnused);
+        ac.setRaw(decode->state);
+        *result = ac.toCommon();
+        break;
+      }
+#endif  // DECODE_MITSUBISHIHEAVY160
+/*******************************************************/
       default:
         return false;
     }

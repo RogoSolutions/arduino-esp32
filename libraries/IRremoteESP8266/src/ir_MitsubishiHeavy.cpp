@@ -27,6 +27,14 @@ const uint16_t kMitsubishiHeavyBitMark = 370;
 const uint16_t kMitsubishiHeavyOneSpace = 420;
 const uint16_t kMitsubishiHeavyZeroSpace = 1220;
 const uint32_t kMitsubishiHeavyGap = kDefaultMessageGap;  // Just a guess.
+/* Ninh.D.H 18.09.2023 ****************************************************/
+const uint16_t kMitsubishiHeavy160HdrMark = 6030;
+const uint16_t kMitsubishiHeavy160HdrSpace = 7450;
+const uint16_t kMitsubishiHeavy160BitMark = 550;
+const uint16_t kMitsubishiHeavy160OneSpace = 3420;
+const uint16_t kMitsubishiHeavy160ZeroSpace = 1420;
+const uint32_t kMitsubishiHeavy160Gap = 7400;  // Just a guess.
+/**************************************************************************/
 
 using irutils::addBoolToString;
 using irutils::addIntToString;
@@ -1048,3 +1056,604 @@ bool IRrecv::decodeMitsubishiHeavy(decode_results* results, uint16_t offset,
   return true;
 }
 #endif  // DECODE_MITSUBISHIHEAVY
+
+/* Ninh.D.H 18.09.2023 *********************************/
+
+#if SEND_MITSUBISHIHEAVY160
+/// Send a MitsubishiHeavy 160-bit A/C message.
+/// Status: BETA / Appears to be working. Needs testing against a real device.
+/// @param[in] data The message to be sent.
+/// @param[in] nbytes The number of bytes of message to be sent.
+/// @param[in] repeat The number of times the command is to be repeated.
+void IRsend::sendMitsubishiHeavy160(const unsigned char data[],
+                                    const uint16_t nbytes,
+                                    const uint16_t repeat) {
+  if (nbytes < kMitsubishiHeavy160StateLength)
+    return;  // Not enough bytes to send a proper message.
+  sendGeneric(kMitsubishiHeavy160HdrMark, kMitsubishiHeavy160HdrSpace,
+              kMitsubishiHeavy160BitMark, kMitsubishiHeavy160OneSpace,
+              kMitsubishiHeavy160BitMark, kMitsubishiHeavy160ZeroSpace,
+              kMitsubishiHeavy160BitMark, kMitsubishiHeavy160Gap,
+              data, nbytes, 38000, false, repeat, kDutyDefault);
+}
+#endif // SEND_MITSUBISHIHEAVY160
+
+// Class for decoding and constructing MitsubishiHeavy160 AC messages.
+
+/// Class constructor
+/// @param[in] pin GPIO to be used when sending.
+/// @param[in] inverted Is the output signal to be inverted?
+/// @param[in] use_modulation Is frequency modulation to be used?
+IRMitsubishiHeavy160Ac::IRMitsubishiHeavy160Ac(const uint16_t pin,
+                                               const bool inverted,
+                                               const bool use_modulation)
+    : _irsend(pin, inverted, use_modulation) { stateReset(); }
+
+/// Set up hardware to be able to send a message.
+void IRMitsubishiHeavy160Ac::begin(void) { _irsend.begin(); }
+
+#if SEND_MITSUBISHIHEAVY
+/// Send the current internal state as an IR message.
+/// @param[in] repeat Nr. of times the message will be repeated.
+void IRMitsubishiHeavy160Ac::send(const uint16_t repeat) {
+  _irsend.sendMitsubishiHeavy160(getRaw(), kMitsubishiHeavy160StateLength,
+                                 repeat);
+}
+#endif  // SEND_MITSUBISHIHEAVY
+
+/// Reset the state of the remote to a known good state/sequence.
+void IRMitsubishiHeavy160Ac::stateReset(void) {
+  _.raw[0]  = 0x0D;
+  for (uint8_t i=1; i<kMitsubishiHeavy160StateLength; i++){
+    _.raw[i] = 0;
+  }
+  _.raw[4]  = 0xF2;
+  _.raw[9]  = 0x01;
+  _.raw[10] = 0x14;
+  _.raw[15] = 0xFF;
+  _.raw[16] = 0x02;
+  _.raw[17] = 0xFD;
+}
+
+/// Get a PTR to the internal state/code for this protocol.
+/// @return PTR to a code for this protocol based on the current internal state.
+uint8_t *IRMitsubishiHeavy160Ac::getRaw(void) {
+  // checksum();
+  setFlipBit();
+  ESP_LOGW("IR", "MitsubishiHeavy160 send");
+  printf("0x");
+  for (uint8_t i=0; i<kMitsubishiHeavy160StateLength; i++){
+    printf("%02X", _.raw[i]);
+  }
+  printf("\n");
+  return _.raw;
+}
+
+/// Set the internal state from a valid code for this protocol.
+/// @param[in] data A valid code for this protocol.
+void IRMitsubishiHeavy160Ac::setRaw(const uint8_t *data) {
+  std::memcpy(_.raw, data, kMitsubishiHeavy160StateLength);
+}
+
+/// Set the requested power state of the A/C to on.
+void IRMitsubishiHeavy160Ac::on(void) { setPower(true); }
+
+/// Set the requested power state of the A/C to off.
+void IRMitsubishiHeavy160Ac::off(void) { setPower(false); }
+
+/// Change the power setting.
+/// @param[in] on true, the setting is on. false, the setting is off.
+void IRMitsubishiHeavy160Ac::setPower(const bool on) {
+  _.Power = on;
+}
+
+/// Get the value of the current power setting.
+/// @return true, the setting is on. false, the setting is off.
+bool IRMitsubishiHeavy160Ac::getPower(void) const {
+  return _.Power;
+}
+
+/// Set the temperature.
+/// @param[in] temp The temperature in degrees celsius.
+void IRMitsubishiHeavy160Ac::setTemp(const uint8_t temp) {
+  uint8_t newtemp = temp;
+  newtemp = std::min(newtemp, kMitsubishiHeavy160MaxTemp);
+  newtemp = std::max(newtemp, kMitsubishiHeavy160MinTemp);
+  _.Temp = newtemp - kMitsubishiHeavy160MinTemp;
+}
+
+/// Get the current temperature setting.
+/// @return The current setting for temp. in degrees celsius.
+uint8_t IRMitsubishiHeavy160Ac::getTemp(void) const {
+  return _.Temp + kMitsubishiHeavy160MinTemp;
+}
+
+/// Set the speed of the fan.
+/// @param[in] speed The desired setting.
+void IRMitsubishiHeavy160Ac::setFan(const uint8_t speed) {
+  uint8_t newspeed = speed;
+  switch (speed) {
+    case kMitsubishiHeavy160FanLow:
+    case kMitsubishiHeavy160FanMed:
+    case kMitsubishiHeavy160FanHigh:
+    case kMitsubishiHeavy160FanMax:
+    case kMitsubishiHeavy160FanEcono:
+    case kMitsubishiHeavy160FanTurbo: break;
+    default: newspeed = kMitsubishiHeavy160FanAuto;
+  }
+  _.Fan = newspeed;
+}
+
+/// Get the current fan speed setting.
+/// @return The current fan speed/mode.
+uint8_t IRMitsubishiHeavy160Ac::getFan(void) const {
+  return _.Fan;
+}
+
+/// Set the operating mode of the A/C.
+/// @param[in] mode The desired operating mode.
+void IRMitsubishiHeavy160Ac::setMode(const uint8_t mode) {
+  uint8_t newmode = mode;
+  switch (mode) {
+    case kMitsubishiHeavy160Cool:
+    case kMitsubishiHeavy160Dry:
+    case kMitsubishiHeavy160Fan:
+    case kMitsubishiHeavy160Heat:
+      break;
+    default:
+      newmode = kMitsubishiHeavy160Auto;
+  }
+  _.Mode = newmode;
+}
+
+/// Get the operating mode setting of the A/C.
+/// @return The current operating mode setting.
+uint8_t IRMitsubishiHeavy160Ac::getMode(void) const {
+  return _.Mode;
+}
+
+/// Set the Vertical Swing mode of the A/C.
+/// @param[in] pos The position/mode to set the swing to.
+void IRMitsubishiHeavy160Ac::setSwingVertical(const stdAc::swingv_t pos) {
+  if (pos == stdAc::swingv_t::kAuto){
+    _.SwingV = true;
+    _.WingV  = kMitsubishiHeavy160SwingVLowest;
+  }
+  else{
+    _.SwingV = false;
+    _.WingV  = convertSwingV(pos);
+  }
+  // _.SwingV = (bool)isAuto;
+  // _.WingV  = std::min(pos, kMitsubishiHeavy160SwingVOff);
+}
+
+/// Get the Vertical Swing mode of the A/C.
+/// @return The native position/mode setting.
+uint8_t IRMitsubishiHeavy160Ac::getSwingVertical(void) const {
+  return _.SwingV;
+}
+
+/// Set the Horizontal Swing mode of the A/C.
+/// @param[in] pos The position/mode to set the swing to.
+void IRMitsubishiHeavy160Ac::setSwingHorizontal(const stdAc::swingh_t pos) {
+  // Not tested
+  // if (pos == stdAc::swingh_t::kAuto){
+  //   _.SwingH = true;
+  //   _.WingH  = kMitsubishiHeavy160SwingHRightMax;
+  // }
+  // else{
+  //   _.SwingH = false;
+  //   _.WingH  = convertSwingH(pos);
+  // }
+}
+
+/// Get the Horizontal Swing mode of the A/C.
+/// @return The native position/mode setting.
+uint8_t IRMitsubishiHeavy160Ac::getSwingHorizontal(void) const {
+  return _.SwingH;
+}
+
+/// Set the Night (Sleep) mode of the A/C.
+/// @param[in] on true, the setting is on. false, the setting is off.
+void IRMitsubishiHeavy160Ac::setNight(const bool on) {
+  // _.Night = on;
+}
+
+/// Get the Night (Sleep) mode of the A/C.
+/// @return true, the setting is on. false, the setting is off.
+bool IRMitsubishiHeavy160Ac::getNight(void) const {
+  return false;
+  // return _.Night;
+}
+
+/// Set the 3D mode of the A/C.
+/// @param[in] on true, the setting is on. false, the setting is off.
+void IRMitsubishiHeavy160Ac::set3D(const bool on) {
+  // if (on)
+  //   { _.Three = 1; _.D = 1; }
+  // else
+  //   { _.Three = 0; _.D = 0; }
+}
+
+/// Get the 3D mode of the A/C.
+/// @return true, the setting is on. false, the setting is off.
+bool IRMitsubishiHeavy160Ac::get3D(void) const {
+  // return _.Three && _.D;
+  return false;
+}
+
+/// Set the Silent (Quiet) mode of the A/C.
+/// @param[in] on true, the setting is on. false, the setting is off.
+void IRMitsubishiHeavy160Ac::setSilent(const bool on) {
+  _.Silent = on;
+}
+
+/// Get the Silent (Quiet) mode of the A/C.
+/// @return true, the setting is on. false, the setting is off.
+bool IRMitsubishiHeavy160Ac::getSilent(void) const {
+  return _.Silent;
+}
+
+/// Set the Filter mode of the A/C.
+/// @param[in] on true, the setting is on. false, the setting is off.
+void IRMitsubishiHeavy160Ac::setFilter(const bool on) {
+  // _.Filter = on;
+}
+
+/// Get the Filter mode of the A/C.
+/// @return true, the setting is on. false, the setting is off.
+bool IRMitsubishiHeavy160Ac::getFilter(void) const {
+  // return _.Filter;
+  return false;
+}
+
+/// Set the Clean mode of the A/C.
+/// @param[in] on true, the setting is on. false, the setting is off.
+void IRMitsubishiHeavy160Ac::setClean(const bool on) {
+  // _.Filter = on;
+  // _.Clean = on;
+}
+
+/// Get the Clean mode of the A/C.
+/// @return true, the setting is on. false, the setting is off.
+bool IRMitsubishiHeavy160Ac::getClean(void) const {
+  // return _.Clean && _.Filter;
+  return false;
+}
+
+/// Set the Turbo mode of the A/C.
+/// @param[in] on true, the setting is on. false, the setting is off.
+void IRMitsubishiHeavy160Ac::setTurbo(const bool on) {
+  if (on)
+    setFan(kMitsubishiHeavy160FanTurbo);
+  else if (getTurbo()) setFan(kMitsubishiHeavy160FanAuto);
+}
+
+/// Get the Turbo mode of the A/C.
+/// @return true, the setting is on. false, the setting is off.
+bool IRMitsubishiHeavy160Ac::getTurbo(void) const {
+  // return _.Fan == kMitsubishiHeavy160FanTurbo;
+  return _.Turbo;
+}
+
+/// Set the Economical mode of the A/C.
+/// @param[in] on true, the setting is on. false, the setting is off.
+void IRMitsubishiHeavy160Ac::setEcono(const bool on) {
+  if (on)
+    setFan(kMitsubishiHeavy160FanEcono);
+  else if (getEcono()) setFan(kMitsubishiHeavy160FanAuto);
+}
+
+/// Get the Economical mode of the A/C.
+/// @return true, the setting is on. false, the setting is off.
+bool IRMitsubishiHeavy160Ac::getEcono(void) const {
+  // return _.Fan == kMitsubishiHeavy160FanEcono;
+  return _.Econo;
+}
+
+/// Verify the given state has a ZM-S signature.
+/// @param[in] state A ptr to a state to be checked.
+/// @return true, the check passed. Otherwise, false.
+bool IRMitsubishiHeavy160Ac::checkZmsSig(const uint8_t *state) {
+  for (uint8_t i = 0; i < kMitsubishiHeavySigLength; i++)
+    if (state[i] != kMitsubishiHeavyZmsSig[i]) return false;
+  return true;
+}
+
+/// Calculate the checksum for the current internal state of the remote.
+/// Note: Technically it has no checksum, but does have inverted byte pairs.
+void IRMitsubishiHeavy160Ac::checksum(void) {
+  const uint8_t kOffset = kMitsubishiHeavySigLength - 2;
+  invertBytePairs(_.raw + kOffset, kMitsubishiHeavy160StateLength - kOffset);
+}
+
+/// Verify the checksum is valid for a given state.
+/// @param[in] state The array to verify the checksum of.
+/// @param[in] length The length/size of the state array.
+/// @return true, if the state has a valid checksum. Otherwise, false.
+/// Note: Technically it has no checksum, but does have inverted byte pairs.
+bool IRMitsubishiHeavy160Ac::validChecksum(const uint8_t *state,
+                                           const uint16_t length) {
+  // Assume anything too short is fine.
+  if (length < kMitsubishiHeavySigLength) return true;
+  const uint8_t kOffset = kMitsubishiHeavySigLength - 2;
+  return checkInvertedBytePairs(state + kOffset, length - kOffset);
+}
+
+/// Convert a stdAc::opmode_t enum into its native mode.
+/// @param[in] mode The enum to be converted.
+/// @return The native equivalent of the enum.
+uint8_t IRMitsubishiHeavy160Ac::convertMode(const stdAc::opmode_t mode) {
+  switch (mode) {
+    case stdAc::opmode_t::kCool: return kMitsubishiHeavy160Cool;
+    case stdAc::opmode_t::kHeat: return kMitsubishiHeavy160Heat;
+    case stdAc::opmode_t::kDry:  return kMitsubishiHeavy160Dry;
+    case stdAc::opmode_t::kFan:  return kMitsubishiHeavy160Fan;
+    default:                     return kMitsubishiHeavy160Auto;
+  }
+}
+
+/// Convert a stdAc::fanspeed_t enum into it's native speed.
+/// @param[in] speed The enum to be converted.
+/// @return The native equivalent of the enum.
+uint8_t IRMitsubishiHeavy160Ac::convertFan(const stdAc::fanspeed_t speed) {
+  switch (speed) {
+    // Assumes Econo is slower than Low.
+    case stdAc::fanspeed_t::kMin:    return kMitsubishiHeavy160FanEcono;
+    case stdAc::fanspeed_t::kLow:    return kMitsubishiHeavy160FanLow;
+    case stdAc::fanspeed_t::kMedium: return kMitsubishiHeavy160FanMed;
+    case stdAc::fanspeed_t::kHigh:   return kMitsubishiHeavy160FanHigh;
+    case stdAc::fanspeed_t::kMax:    return kMitsubishiHeavy160FanMax;
+    default:                         return kMitsubishiHeavy160FanAuto;
+  }
+}
+
+/// Convert a stdAc::swingv_t enum into it's native setting.
+/// @param[in] position The enum to be converted.
+/// @return The native equivalent of the enum.
+uint8_t IRMitsubishiHeavy160Ac::convertSwingV(const stdAc::swingv_t position) {
+  switch (position) {
+    // case stdAc::swingv_t::kAuto:    return kMitsubishiHeavy160SwingVAuto;
+    case stdAc::swingv_t::kHighest: return kMitsubishiHeavy160SwingVHighest;
+    case stdAc::swingv_t::kHigh:    return kMitsubishiHeavy160SwingVHigh;
+    case stdAc::swingv_t::kMiddle:  return kMitsubishiHeavy160SwingVMiddle;
+    case stdAc::swingv_t::kLow:     return kMitsubishiHeavy160SwingVLow;
+    case stdAc::swingv_t::kLowest:  return kMitsubishiHeavy160SwingVLowest;
+    default:                        return kMitsubishiHeavy160SwingVLowest;
+  }
+}
+
+/// Convert a stdAc::swingh_t enum into it's native setting.
+/// @param[in] position The enum to be converted.
+/// @return The native equivalent of the enum.
+uint8_t IRMitsubishiHeavy160Ac::convertSwingH(const stdAc::swingh_t position) {
+  switch (position) {
+    // case stdAc::swingh_t::kAuto:     return kMitsubishiHeavy160SwingHAuto;
+    case stdAc::swingh_t::kLeftMax:  return kMitsubishiHeavy160SwingHLeftMax;
+    case stdAc::swingh_t::kLeft:     return kMitsubishiHeavy160SwingHLeft;
+    case stdAc::swingh_t::kMiddle:   return kMitsubishiHeavy160SwingHMiddle;
+    case stdAc::swingh_t::kRight:    return kMitsubishiHeavy160SwingHRight;
+    case stdAc::swingh_t::kRightMax: return kMitsubishiHeavy160SwingHRightMax;
+    default:                         return kMitsubishiHeavy160SwingHRightMax;
+  }
+}
+
+/// Convert a native mode into its stdAc equivalent.
+/// @param[in] mode The native setting to be converted.
+/// @return The stdAc equivalent of the native setting.
+stdAc::opmode_t IRMitsubishiHeavy160Ac::toCommonMode(const uint8_t mode) {
+  switch (mode) {
+    case kMitsubishiHeavy160Cool: return stdAc::opmode_t::kCool;
+    case kMitsubishiHeavy160Heat: return stdAc::opmode_t::kHeat;
+    case kMitsubishiHeavy160Dry:  return stdAc::opmode_t::kDry;
+    case kMitsubishiHeavy160Fan:  return stdAc::opmode_t::kFan;
+    default:                      return stdAc::opmode_t::kAuto;
+  }
+}
+
+/// Convert a native fan speed into its stdAc equivalent.
+/// @param[in] spd The native setting to be converted.
+/// @return The stdAc equivalent of the native setting.
+stdAc::fanspeed_t IRMitsubishiHeavy160Ac::toCommonFanSpeed(const uint8_t spd) {
+  switch (spd) {
+    case kMitsubishiHeavy160FanMax:   return stdAc::fanspeed_t::kMax;
+    case kMitsubishiHeavy160FanHigh:  return stdAc::fanspeed_t::kHigh;
+    case kMitsubishiHeavy160FanMed:   return stdAc::fanspeed_t::kMedium;
+    case kMitsubishiHeavy160FanLow:   return stdAc::fanspeed_t::kLow;
+    case kMitsubishiHeavy160FanEcono: return stdAc::fanspeed_t::kMin;
+    default:                          return stdAc::fanspeed_t::kAuto;
+  }
+}
+
+/// Convert a native horizontal swing postion to it's common equivalent.
+/// @param[in] isAuto, pos.
+/// @return The common horizontal swing position.
+stdAc::swingh_t IRMitsubishiHeavy160Ac::getCommonSwingH(uint8_t isAuto, uint8_t pos) {
+  if (!isAuto){
+    switch (pos) {
+      case kMitsubishiHeavy160SwingHLeftMax:  return stdAc::swingh_t::kLeftMax;
+      case kMitsubishiHeavy160SwingHLeft:     return stdAc::swingh_t::kLeft;
+      case kMitsubishiHeavy160SwingHMiddle:   return stdAc::swingh_t::kMiddle;
+      case kMitsubishiHeavy160SwingHRight:    return stdAc::swingh_t::kRight;
+      case kMitsubishiHeavy160SwingHRightMax: return stdAc::swingh_t::kRightMax;
+      default:                                return stdAc::swingh_t::kOff;
+    }
+  }
+  return stdAc::swingh_t::kAuto;
+}
+
+/// Convert a native vertical swing postion to it's common equivalent.
+/// @param[in] isAuto, pos.
+/// @return The common vertical swing position.
+stdAc::swingv_t IRMitsubishiHeavy160Ac::getCommonSwingV(uint8_t isAuto, uint8_t pos) {
+  if (!isAuto){
+    switch (pos) {
+      case kMitsubishiHeavy160SwingVHighest: return stdAc::swingv_t::kHighest;
+      case kMitsubishiHeavy160SwingVHigh:    return stdAc::swingv_t::kHigh;
+      case kMitsubishiHeavy160SwingVMiddle:  return stdAc::swingv_t::kMiddle;
+      case kMitsubishiHeavy160SwingVLow:     return stdAc::swingv_t::kLow;
+      default:                               return stdAc::swingv_t::kOff;
+    }
+  }
+  return stdAc::swingv_t::kAuto;
+}
+
+/// Convert the current internal state into its stdAc::state_t equivalent.
+/// @return The stdAc equivalent of the native settings.
+stdAc::state_t IRMitsubishiHeavy160Ac::toCommon(void) const {
+  stdAc::state_t result{};
+  result.protocol = decode_type_t::MITSUBISHI_HEAVY_160;
+  result.model = -1;  // No models used.
+  result.power = _.Power;
+  result.mode = toCommonMode(_.Mode);
+  result.celsius = true;
+  result.degrees = getTemp();
+  result.fanspeed = toCommonFanSpeed(_.Fan);
+  result.swingv = getCommonSwingV(_.SwingV, _.WingV);
+  result.swingh = getCommonSwingH(_.SwingH, _.WingH);
+  result.turbo = getTurbo();
+  result.econo = getEcono();
+  result.clean = getClean();
+  result.quiet = _.Silent;
+  result.filter = getFilter();
+  result.sleep = false;
+  // Not supported.
+  result.light = false;
+  result.beep = false;
+  result.clock = -1;
+  return result;
+}
+
+void IRMitsubishiHeavy160Ac::setFlipBit(void){
+  _.raw[5]  = ~_.raw[1];
+  _.raw[6]  = ~_.raw[2];
+  _.raw[7]  = ~_.raw[3];
+  _.raw[12] = ~_.raw[8];
+  _.raw[13] = ~_.raw[9];
+  _.raw[14] = ~_.raw[10];
+}
+
+/// Convert the internal state into a human readable string.
+/// @return A string containing the settings in human-readable form.
+String IRMitsubishiHeavy160Ac::toString(void) const {
+  ESP_LOG_BUFFER_HEX("IR", _.raw, 20);
+  String result = "";
+  result.reserve(180);  // Reserve some heap for the string to reduce fragging.
+  result += addBoolToString(_.Power, kPowerStr, false);
+  result += addModeToString(_.Mode, kMitsubishiHeavy160Auto,
+                            kMitsubishiHeavy160Cool, kMitsubishiHeavy160Heat,
+                            kMitsubishiHeavy160Dry, kMitsubishiHeavy160Fan);
+  result += addTempToString(getTemp());
+  result += addIntToString(_.Fan, kFanStr);
+  result += kSpaceLBraceStr;
+  switch (_.Fan) {
+    case kMitsubishiHeavy160FanAuto:
+      result += kAutoStr;
+      break;
+    case kMitsubishiHeavy160FanHigh:
+      result += kHighStr;
+      break;
+    case kMitsubishiHeavy160FanLow:
+      result += kLowStr;
+      break;
+    case kMitsubishiHeavy160FanMed:
+      result += kMedStr;
+      break;
+    case kMitsubishiHeavy160FanMax:
+      result += kMaxStr;
+      break;
+    case kMitsubishiHeavy160FanEcono:
+      result += kEconoStr;
+      break;
+    case kMitsubishiHeavy160FanTurbo:
+      result += kTurboStr;
+      break;
+    default:
+      result += kUnknownStr;
+  }
+  result += ')';
+  result += addSwingVToString((uint8_t)getCommonSwingV(_.SwingV, _.WingV),
+                              (uint8_t)stdAc::swingv_t::kAuto,
+                              (uint8_t)stdAc::swingv_t::kHighest,
+                              (uint8_t)stdAc::swingv_t::kHigh,
+                              (uint8_t)stdAc::swingv_t::kAuto,  // UpperMid unused
+                              (uint8_t)stdAc::swingv_t::kMiddle,
+                              (uint8_t)stdAc::swingv_t::kAuto,  // LowerMid unused
+                              (uint8_t)stdAc::swingv_t::kLow,
+                              (uint8_t)stdAc::swingv_t::kLowest,
+                              (uint8_t)stdAc::swingv_t::kOff,
+                              // Below are unused.
+                              (uint8_t)stdAc::swingv_t::kAuto,
+                              (uint8_t)stdAc::swingv_t::kAuto,
+                              (uint8_t)stdAc::swingv_t::kAuto);
+  result += addSwingHToString((uint8_t)getCommonSwingH(_.SwingH, _.WingH),
+                              (uint8_t)stdAc::swingh_t::kAuto,
+                              (uint8_t)stdAc::swingh_t::kLeftMax,
+                              (uint8_t)stdAc::swingh_t::kLeft,
+                              (uint8_t)stdAc::swingh_t::kMiddle,
+                              (uint8_t)stdAc::swingh_t::kRight,
+                              (uint8_t)stdAc::swingh_t::kRightMax,
+                              (uint8_t)stdAc::swingh_t::kOff,
+                              (uint8_t)stdAc::swingh_t::kWide,
+                              (uint8_t)stdAc::swingh_t::kWide,
+                              // Below are unused.
+                              (uint8_t)stdAc::swingh_t::kAuto,
+                              (uint8_t)stdAc::swingh_t::kAuto);
+  result += addBoolToString(getSilent(), kSilentStr);
+  result += addBoolToString(getTurbo(), kTurboStr);
+  result += addBoolToString(getEcono(), kEconoStr);
+  result += addBoolToString(getNight(), kNightStr);
+  result += addBoolToString(getFilter(), kFilterStr);
+  result += addBoolToString(get3D(), k3DStr);
+  result += addBoolToString(getClean(), kCleanStr);
+  return result;
+}
+
+#if DECODE_MITSUBISHIHEAVY160
+/// Decode the supplied Mitsubishi Heavy Industries A/C message.
+/// Status: BETA / Appears to be working. Needs testing against a real device.
+/// @param[in,out] results Ptr to the data to decode & where to store the result
+/// @param[in] offset The starting index to use when attempting to decode the
+///   raw data. Typically/Defaults to kStartOffset.
+/// @param[in] nbits The number of data bits to expect.
+///   Typically kMitsubishiHeavy88Bits or kMitsubishiHeavy160Bits (def).
+/// @param[in] strict Flag indicating if we should perform strict matching.
+/// @return True if it can decode it, false if it can't.
+bool IRrecv::decodeMitsubishiHeavy160(decode_results* results, uint16_t offset,
+                                   const uint16_t nbits, const bool strict) {
+  // Compliance
+  if (strict && nbits != kMitsubishiHeavy160Bits) return false;  // Out of spec.
+
+  uint16_t used;
+  used = matchGeneric(results->rawbuf + offset, results->state,
+                      results->rawlen - offset, nbits,
+                      kMitsubishiHeavy160HdrMark, kMitsubishiHeavy160HdrSpace,
+                      kMitsubishiHeavy160BitMark, kMitsubishiHeavy160OneSpace,
+                      kMitsubishiHeavy160BitMark, kMitsubishiHeavy160ZeroSpace,
+                      kMitsubishiHeavy160BitMark, kMitsubishiHeavy160Gap, false,
+                      _tolerance, 0, false);
+  if (used == 0) return false;
+  offset += used;
+  // Compliance
+  // if (!IRMitsubishiHeavy160Ac::checkZmsSig(results->state)){
+  //   ESP_LOGW("MITSUBISHIHEAVY160", "checkZmsSig FAIL");
+  // }
+  // if (!IRMitsubishiHeavy160Ac::validChecksum(results->state)){
+  //   ESP_LOGW("MITSUBISHIHEAVY160", "validChecksum FAIL");
+  // }
+  if (strict && !(IRMitsubishiHeavy160Ac::checkZmsSig(results->state) &&
+                  IRMitsubishiHeavy160Ac::validChecksum(results->state))){
+    ESP_LOGW("MITSUBISHIHEAVY160", "CHECKSUM FAIL");
+    return false;
+  }
+  results->decode_type = MITSUBISHI_HEAVY_160;
+
+  // Success
+  results->bits = nbits;
+  // No need to record the state as we stored it as we decoded it.
+  // As we use result->state, we don't record value, address, or command as it
+  // is a union data type.
+  return true;
+}
+#endif  // DECODE_MITSUBISHIHEAVY160
+/******************************************************************************/

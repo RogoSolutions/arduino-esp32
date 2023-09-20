@@ -1155,6 +1155,12 @@ decode:
     DPRINTLN("Attempting Daikin 312-bit decode");
     if (decodeDaikin312(results, offset)) return true;
 #endif  // DECODE_DAIKIN312
+/* Ninh.D.H 18.09.2023 *********************************/
+#if DECODE_MITSUBISHIHEAVY160
+    DPRINTLN("Attempting Mitsubishi 160 AC decode");
+    if (decodeMitsubishiHeavy160(results, offset)) return true;
+#endif
+/*******************************************************/
   // Typically new protocols are added above this line.
   }
 #if DECODE_HASH
