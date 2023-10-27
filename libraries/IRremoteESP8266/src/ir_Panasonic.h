@@ -268,4 +268,157 @@ class IRPanasonicAc32 {
   PanasonicAc32Protocol _;  ///< The state in code form.
 };
 
+
+const uint8_t kPanasonicAc128Auto = 0;
+const uint8_t kPanasonicAc128Fan = 0;
+const uint8_t kPanasonicAc128Heat = 2;
+const uint8_t kPanasonicAc128Cool = 4;
+const uint8_t kPanasonicAc128Dry = 6;
+
+const uint8_t kPanasonicAc128FanAuto = 0;
+const uint8_t kPanasonicAc128FanLow  = 2;
+const uint8_t kPanasonicAc128FanMed  = 3;
+const uint8_t kPanasonicAc128FanHigh = 1;
+
+const uint8_t kPanasonicAc128SwingVAuto    = 0;
+const uint8_t kPanasonicAc128SwingVHighest = 1; 
+const uint8_t kPanasonicAc128SwingVHigh    = 2;
+const uint8_t kPanasonicAc128SwingVMiddle  = 3;
+const uint8_t kPanasonicAc128SwingVLow     = 4;
+const uint8_t kPanasonicAc128SwingVLowest  = 5;
+const uint8_t kPanasonicAc128SwingVOff     = 7;
+
+const uint8_t kPanasonicAc128MinTemp = 16;      // Celsius
+const uint8_t kPanasonicAc128MaxTemp = 30;      // Celsius
+const uint8_t kPanasonicAc128FanModeTemp = 27;  // Celsius
+
+enum panasonic_ac_128_cmd : int8_t {
+  kPanasonicAC128Unused = -1,
+  kPanasonicAC128Common = 0,
+  kPanasonicAC128Off    = 1,
+  kPanasonicAC128On     = 2,
+};
+
+union PanasonicAc128Protocol {
+  uint8_t raw[kPanasonicAc128StateLength];  ///< The state in IR code form.
+  struct {
+    // Byte 0-4
+    uint8_t Header[5];
+    // Byte 5
+    uint8_t Type        :2;
+    uint8_t Fan         :2;
+    uint8_t             :1;
+    uint8_t Mode        :3;
+    // Byte 6
+    uint8_t             :1;
+    uint8_t Temp        :5;
+    uint8_t             :1;
+    uint8_t isAuto      :1;
+    // Byte 7
+    uint8_t             :8; // 0xC0
+    // Byte 8-9
+    uint8_t             :8; // 0x00
+    uint8_t             :8; // 0x00
+    // Byte 10
+    uint8_t SwingV      :3;
+    uint8_t             :5;
+    // Byte 11 // Checksum
+    uint8_t Check1      :8;
+    // Byte 12
+    uint8_t             :8; // 0x02
+    // Byte 13
+    uint8_t             :4;
+    uint8_t isFan       :1;
+    uint8_t Sensor      :1;
+    uint8_t Ion         :1;
+    uint8_t             :1;
+    // Byte 14
+    uint8_t             :6;
+    uint8_t Econo       :1;
+    uint8_t             :1;
+    // Byte 15
+    uint8_t Check2      :8;
+  };
+};
+
+class IRPanasonicAc128 {
+ public:
+  explicit IRPanasonicAc128(const uint16_t pin, const bool inverted = false,
+                           const bool use_modulation = true);
+  void stateReset(void);
+#if SEND_PANASONIC_AC128
+  void send(const uint16_t repeat = kPanasonicAcDefaultRepeat);
+  /// Run the calibration to calculate uSec timing offsets for this platform.
+  /// @return The uSec timing offset needed per modulation of the IR Led.
+  /// @note This will produce a 65ms IR signal pulse at 38kHz.
+  ///   Only ever needs to be run once per object instantiation, if at all.
+  int8_t calibrate(void) { return _irsend.calibrate(); }
+#endif  // SEND_PANASONIC_AC128
+  void begin(void);
+  void on(void);
+  void off(void);
+  void setPower(const bool on, const int16_t type);
+  bool getPower(void);
+  void setTemp(const uint8_t degrees);
+  uint8_t getTemp(void);
+  void setFan(const uint8_t speed);
+  uint8_t getFan(void);
+  void setMode(const uint8_t mode);
+  uint8_t getMode(void);
+  bool getSensor(void);
+  void setSensor(const bool on);
+  bool getEcono(void);
+  void setEcono(const bool on);
+  void setFilter(const bool on);
+  void setRaw(const uint8_t state[]);
+  uint8_t *getRaw(void);
+  static bool validChecksum(const uint8_t *state,
+                            const uint16_t length = kPanasonicAcStateLength);
+  void calcChecksum(void);
+  void setQuiet(const bool on);
+  bool getQuiet(void);
+  void setPowerful(const bool on);
+  bool getPowerful(void);
+  void setIon(const bool on);
+  bool getIon(void);
+  void setModel(const panasonic_ac_remote_model_t model);
+  panasonic_ac_remote_model_t getModel(void);
+  void setSwingVertical(const uint8_t elevation);
+  uint8_t getSwingVertical(void);
+  void setSwingHorizontal(const uint8_t direction);
+  uint8_t getSwingHorizontal(void);
+  static uint16_t encodeTime(const uint8_t hours, const uint8_t mins);
+  uint16_t getClock(void);
+  void setClock(const uint16_t mins_since_midnight);
+  uint16_t getOnTimer(void);
+  void setOnTimer(const uint16_t mins_since_midnight, const bool enable = true);
+  void cancelOnTimer(void);
+  bool isOnTimerEnabled(void);
+  uint16_t getOffTimer(void);
+  void setOffTimer(const uint16_t mins_since_midnight,
+                   const bool enable = true);
+  void cancelOffTimer(void);
+  bool isOffTimerEnabled(void);
+  static uint8_t convertMode(const stdAc::opmode_t mode);
+  static uint8_t convertFan(const stdAc::fanspeed_t speed);
+  static uint8_t convertSwingV(const stdAc::swingv_t position);
+  static uint8_t convertSwingH(const stdAc::swingh_t position);
+  static stdAc::opmode_t toCommonMode(const uint8_t mode);
+  static stdAc::fanspeed_t toCommonFanSpeed(const uint8_t speed);
+  static stdAc::swingv_t toCommonSwingV(const uint8_t pos);
+  static stdAc::swingh_t toCommonSwingH(const uint8_t pos);
+  stdAc::state_t toCommon(void);
+  String toString(void);
+#ifndef UNIT_TEST
+
+ private:
+  IRsend _irsend;  ///< Instance of the IR send class
+#else  // UNIT_TEST
+  /// @cond IGNORE
+  IRsendTest _irsend;  ///< Instance of the testing IR send class
+  /// @endcond
+#endif  // UNIT_TEST
+  PanasonicAc128Protocol _;  ///< The state in code form.
+};
+
 #endif  // IR_PANASONIC_H_

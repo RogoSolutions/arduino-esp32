@@ -553,6 +553,17 @@ void electra(IRElectraAc *ac,
                           const bool econo, const bool filter,
                           const bool clean, const int16_t sleep);
 #endif //SEND_MITSUBISHIHEAVY160
+#if SEND_PANASONIC_AC128
+  void panasonic128(IRPanasonicAc128 *ac, const int16_t model,
+                    const bool on, const stdAc::opmode_t mode,
+                    const float degrees,
+                    const stdAc::fanspeed_t fan,
+                    const stdAc::swingv_t swingv,
+                    const stdAc::swingh_t swingh,
+                    const bool sensor, const bool ion,
+                    const bool econo, const bool filter,
+                    const bool clean, const int16_t sleep);
+#endif  // SEND_PANASONIC_AC128
 /******************************************************************************/
               
 static stdAc::state_t cleanState(const stdAc::state_t state);

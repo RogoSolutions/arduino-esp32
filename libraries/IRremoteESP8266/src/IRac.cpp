@@ -336,6 +336,9 @@ bool IRac::isProtocolSupported(const decode_type_t protocol) {
 #if SEND_MITSUBISHIHEAVY160
     case decode_type_t::MITSUBISHI_HEAVY_160:
 #endif
+#if SEND_PANASONIC_AC128
+    case decode_type_t::PANASONIC_AC128:
+#endif
 /*******************************************************/
     case decode_type_t::WHIRLPOOL_AC:
       return true;
@@ -2070,6 +2073,53 @@ void IRac::panasonic32(IRPanasonicAc32 *ac,
 }
 #endif  // SEND_PANASONIC_AC32
 
+/* Ninh.D.H 25.10.2023 *********************************************************/
+#if SEND_PANASONIC_AC128
+/// Send a Panasonic AC 128-bit A/C message with the supplied settings.
+/// @param[in, out] ac A Ptr to an IRPanasonicAc128 object to use.
+/// @param[in] model The cmd type.
+/// @param[in] on The power setting.
+/// @param[in] mode The operation mode setting.
+/// @param[in] degrees The temperature setting in degrees.
+/// @param[in] fan The speed setting for the fan.
+/// @param[in] swingv The vertical swing setting.
+/// @param[in] swingh The horizontal swing setting.
+/// @param[in] quiet Run the device in quiet/silent mode.
+/// @param[in] turbo Run the device in turbo/powerful mode.
+/// @param[in] econo Run the device in economical mode.
+/// @param[in] filter Turn on the (ion/pollen/etc) filter mode.
+/// @param[in] clean Turn on the self-cleaning mode. e.g. Mould, dry filters etc
+/// @param[in] sleep Nr. of minutes for sleep mode. -1 is Off, >= 0 is on.
+void IRac::panasonic128(IRPanasonicAc128 *ac, const int16_t model,
+                        const bool on, const stdAc::opmode_t mode,
+                        const float degrees,
+                        const stdAc::fanspeed_t fan,
+                        const stdAc::swingv_t swingv,
+                        const stdAc::swingh_t swingh,
+                        const bool sensor, const bool ion,
+                        const bool econo, const bool filter,
+                        const bool clean, const int16_t sleep) {
+  ac->begin();
+  ac->setPower(on, model);
+  ac->setMode(ac->convertMode(mode));
+  ac->setTemp(degrees);
+  ac->setFan(ac->convertFan(fan));
+  ac->setSwingVertical(ac->convertSwingV(swingv));
+  // ac->setSwingHorizontal(swingh);
+  // // No Light setting available.
+  ac->setSensor(true);
+  ac->setIon(true);
+  ac->setEcono(econo);
+  // // No Beep setting available.
+  ac->setFilter(filter);
+  // // No Beep setting available.
+  // // No Night setting available.
+  // // No Clock setting available.
+  ac->send();
+}
+#endif  // SEND_PANASONIC_AC128
+/******************************************************************************/
+
 #if SEND_SAMSUNG_AC
 /// Send a Samsung A/C message with the supplied settings.
 /// @note Multiple IR messages may be generated & sent.
@@ -3453,6 +3503,16 @@ bool IRac::sendAc(const stdAc::state_t desired, const stdAc::state_t *prev) {
       break;
     }
 #endif  // SEND_MITSUBISHIHEAVY160
+#if SEND_PANASONIC_AC128
+    case PANASONIC_AC128:
+    {
+      IRPanasonicAc128 ac(_pin, _inverted, _modulation);
+      panasonic128(&ac, send.model, send.power, send.mode, degC, send.fanspeed,
+                   send.swingv, send.swingh, send.quiet, send.turbo,
+                   send.econo, send.filter, send.clean, send.sleep);
+      break;
+    }
+#endif  // SEND_PANASONIC_AC128
 /*************************************************************************/
     default:
       return false;  // Fail, didn't match anything.
@@ -4282,6 +4342,13 @@ namespace IRAcUtils {
         return ac.toString();
       }
 #endif  // DECODE_MITSUBISHIHEAVY160
+#if DECODE_PANASONIC_AC128
+      case decode_type_t::PANASONIC_AC128: {
+        IRPanasonicAc128 ac(kGpioUnused);
+        ac.setRaw(result->state);
+        return ac.toString();
+      }
+#endif  // DECODE_PANASONIC_AC128
 /*******************************************************/
       default:
         return "";
@@ -4813,6 +4880,14 @@ namespace IRAcUtils {
         break;
       }
 #endif  // DECODE_MITSUBISHIHEAVY160
+#if DECODE_PANASONIC_AC128
+      case decode_type_t::PANASONIC_AC128: {
+        IRPanasonicAc128 ac(kGpioUnused);
+        ac.setRaw(decode->state);
+        *result = ac.toCommon();
+        break;
+      }
+#endif  // DECODE_PANASONIC_AC128
 /*******************************************************/
       default:
         return false;

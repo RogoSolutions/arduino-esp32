@@ -1160,6 +1160,10 @@ decode:
     DPRINTLN("Attempting Mitsubishi 160 AC decode");
     if (decodeMitsubishiHeavy160(results, offset)) return true;
 #endif
+#if DECODE_PANASONIC_AC128
+    DPRINTLN("Attempting Panasonic AC decode");
+    if (decodePanasonicAC128(results, offset)) return true;
+#endif
 /*******************************************************/
   // Typically new protocols are added above this line.
   }

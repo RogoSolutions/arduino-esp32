@@ -1070,6 +1070,9 @@ D_STR_INDIRECT " " D_STR_MODE
 #ifndef D_STR_MITSUBISHI_HEAVY_160
 #define D_STR_MITSUBISHI_HEAVY_160 "MITSUBISHI_HEAVY_160"
 #endif // D_STR_MITSUBISHI_HEAVY_160
+#ifndef D_STR_PANASONIC_AC128
+#define D_STR_PANASONIC_AC128 "PANASONIC_AC128"
+#endif // D_STR_PANASONIC_AC128
 /*******************************************************/
 
 // IRrecvDumpV2+

@@ -1443,6 +1443,11 @@ bool IRsend::send(const decode_type_t type, const uint8_t *state,
       sendMitsubishiHeavy160(state, nbytes);
       break;
 #endif  // SEND_MITSUBISHIHEAVY160
+#if SEND_PANASONIC_AC128
+    case PANASONIC_AC128:
+      sendPanasonicAC128(state, nbytes);
+      break;
+#endif  // SEND_PANASONIC_AC128
 /*******************************************************/
     default:
       return false;

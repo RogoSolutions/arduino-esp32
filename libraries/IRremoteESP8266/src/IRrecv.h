@@ -867,6 +867,12 @@ class IRrecv {
                           const uint16_t nbits = kMitsubishiHeavy160Bits,
                           const bool strict = false);
 #endif //DECODE_MITSUBISHIHEAVY160
+#if DECODE_PANASONIC_AC128
+  bool decodePanasonicAC128(decode_results *results,
+                          uint16_t offset = kStartOffset,
+                          const uint16_t nbits = kPanasonicAc128Bits,
+                          const bool strict = false);
+#endif //DECODE_PANASONIC_AC128
 /*******************************************************/
 };
 

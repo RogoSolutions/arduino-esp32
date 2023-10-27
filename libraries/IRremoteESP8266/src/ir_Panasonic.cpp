@@ -1339,3 +1339,448 @@ stdAc::state_t IRPanasonicAc32::toCommon(const stdAc::state_t *prev) const {
   result.clock = -1;
   return result;
 }
+
+/* Ninh.D.H 18.09.2023 ***************************************************************/
+/// Class constructor
+/// @param[in] pin GPIO to be used when sending.
+/// @param[in] inverted Is the output signal to be inverted?
+/// @param[in] use_modulation Is frequency modulation to be used?
+IRPanasonicAc128::IRPanasonicAc128(const uint16_t pin, const bool inverted,
+                             const bool use_modulation)
+    : _irsend(pin, inverted, use_modulation) { stateReset(); }
+
+/// Set up hardware to be able to send a message.
+void IRPanasonicAc128::begin(void) { _irsend.begin(); }
+
+/// Reset the state of the remote to a known good state/sequence.
+void IRPanasonicAc128::stateReset(void) {
+  uint8_t kPanasonicAc128KnownGoodState[kPanasonicAc128StateLength] = {
+    0x40, 0x00, 0x14, 0x81, 0x26, 0x80, 0x2A, 0xC0,
+    0x00, 0x00, 0x00, 0x32, 0x02, 0x87, 0x07, 0x4F};
+  setRaw(kPanasonicAc128KnownGoodState);
+}
+
+void IRPanasonicAc128::setRaw(const uint8_t state[]) {
+  memcpy(_.raw, state, kPanasonicAc128StateLength);
+}
+
+void IRPanasonicAc128::calcChecksum(void) {
+  // ToDo: wrong - remove
+  _.Check1 = sumBytes(_.raw, 11, 0xCD);
+  if (getTemp() < 20) _.Check1 += 0x0F;
+  ESP_LOGW("IR", "Sum: %02X", _.Check1);
+
+  uint8_t check_reverse = 0;
+  for (uint16_t i=0x00; i<=0xFF; i++){
+    uint8_t sum = i;
+    uint32_t SUM = 0;
+    for (uint8_t i=0; i<11; i++){
+      sum += _.raw[i];
+      SUM += _.raw[i];
+    }
+    if (sum == _.Check1){
+      ESP_LOGW("IR", "CRC Init: 0x%02X", i);
+      ESP_LOGW("IR", "SUM: %d", SUM);
+      break;
+    }
+  }
+
+  // for (uint8_t i=0; i<16; i++){
+  //   check_reverse += _.raw[i];
+  // }
+  // if (getTemp() < 20) _.Check1 += 0x0F;
+  // ESP_LOGW("IR", "Sum0: %02X, Sum: %02X", check_reverse, _.Check1);
+
+  // for (uint16_t i=0x00; i<=0xFF; i++){
+  //   uint8_t sum = (uint8_t)(check_reverse + i);
+  //   if (sum == _.Check1){
+  //     ESP_LOGW("IR", "CRC Init: 0x%02X", i);
+  //     break;
+  //   }
+  // }
+
+  switch (getMode()){
+
+    case kPanasonicAcAuto: {
+      if (getTemp() < 20) _.Check1 += 0x0F;
+      _.Check2 = sumBytes(_.raw, 15, 0xCE);
+      if (getTemp() < 23 && getSwingVertical() == kPanasonicAc128SwingVAuto) _.Check2 += 0x0F;
+      if (getTemp() < 20 && getSwingVertical() != kPanasonicAc128SwingVAuto) _.Check2 += 0x0F;
+      // if ((getTemp() < 20 || getTemp() > 23) && getFan() != kPanasonicAc128FanAuto) _.Check2 -= 0x0F;
+      // if (getTemp() > 21 && getTemp() < 24 && getFan() == kPanasonicAc128FanMed) _.Check2 -= 0x0F;
+      break;
+    }
+
+    case kPanasonicAcHeat: {
+      _.Check1 += 0x0F;
+      _.Check1 += 0x0F;
+      _.Check1 += 0x0F;
+      if (getTemp() < 28) { _.Check1 += 0x0F; }
+      if (getTemp() < 20) _.Check1 += 0x0F;
+      _.Check2 = sumBytes(_.raw, 15, 0xCE);
+      _.Check2 += 0x0F;
+      _.Check2 += 0x0F;
+      _.Check2 += 0x0F;
+      if (getTemp() < 28) { _.Check2 += 0x0F; }
+      if (getTemp() < 20) { _.Check2 += 0x0F; }
+      if (getTemp() > 20 && getSwingVertical() == kPanasonicAc128SwingVAuto)
+        _.Check2 += 0x0F;
+      break;
+    }
+
+    case kPanasonicAcDry: {
+      _.Check1 -= 0x0F;
+      _.Check1 -= 0x0F;
+      _.Check1 -= 0x0F;
+      _.Check1 -= 0x0F;
+      if (getTemp() < 20) _.Check1 += 0x0F;
+      _.Check2 = sumBytes(_.raw, 15, 0xCE);
+      _.Check2 -= 0x0F;
+      _.Check2 -= 0x0F;
+      _.Check2 -= 0x0F;
+      _.Check2 -= 0x0F;
+      if (getTemp() > 19 && getSwingVertical() != kPanasonicAc128SwingVAuto) _.Check2 -= 0x0F;
+      if (getTemp() > 22 && getSwingVertical() == kPanasonicAc128SwingVAuto) _.Check2 -= 0x0F;
+      if (getFan() != kPanasonicAc128FanMed && getSwingVertical() == kPanasonicAc128SwingVAuto) _.Check2 += 0x0F;
+      break;
+    }
+
+    case kPanasonicAcCool: {
+      if (getTemp() < 20) _.Check1 += 0x0F;
+      _.Check2 = sumBytes(_.raw, 15, 0xCE);
+      if (getTemp() > 22) _.Check2 -= 0x0F;
+      break;
+    }
+
+    default: {
+      _.Check1 += 8*0x0F;
+      _.Check2 = sumBytes(_.raw, 15, 0xCE);
+      _.Check2 += 7*0x0F;
+      break;
+    }
+  }
+}
+
+uint8_t* IRPanasonicAc128::getRaw(void) {
+  calcChecksum();
+  return _.raw;
+}
+
+bool IRPanasonicAc128::getPower(void) {
+  if (_.Type == 1) return false;
+  else return true;
+}
+
+void IRPanasonicAc128::setPower(const bool on, const int16_t type) {
+  if (on){
+    if (type == panasonic_ac_128_cmd::kPanasonicAC128Common) _.Type = 0;
+    else _.Type = 2;
+  }
+  else { _.Type = 1; }
+}
+
+uint8_t IRPanasonicAc128::getMode(void) {
+  if (_.isAuto) return kPanasonicAcAuto;
+  uint8_t mode = kPanasonicAcAuto;
+  switch (_.Mode){
+    case kPanasonicAc128Fan:
+      mode = kPanasonicAcFan;
+      break;
+    case kPanasonicAc128Cool:
+      mode = kPanasonicAcCool;
+      break;
+    case kPanasonicAc128Heat:
+      mode = kPanasonicAcHeat;
+      break;
+    case kPanasonicAc128Dry:
+      mode = kPanasonicAcDry;
+      break;
+  }
+  return mode;
+}
+
+void IRPanasonicAc128::setMode(const uint8_t mode) {
+  switch (mode) {
+    case kPanasonicAcAuto:
+      _.isAuto = true;
+      _.Mode = kPanasonicAc128Auto;
+      break;
+    case kPanasonicAcCool:
+      _.isAuto = false;
+      _.Mode = kPanasonicAc128Cool;
+      break;
+    case kPanasonicAcDry:
+      _.isAuto = false;
+      _.Mode = kPanasonicAc128Dry;
+      break;
+    case kPanasonicAcHeat:
+      _.isAuto = false;
+      _.Mode = kPanasonicAc128Heat;
+      break;
+    case kPanasonicAcFan:
+      _.isAuto = false;
+      _.Mode = kPanasonicAc128Fan;
+      break;
+    default:
+      _.Mode = kPanasonicAc128Auto;
+      _.isAuto = true;
+      break;
+  }
+}
+
+uint8_t IRPanasonicAc128::convertMode(const stdAc::opmode_t mode) {
+  switch (mode) {
+    case stdAc::opmode_t::kCool: return kPanasonicAcCool;
+    case stdAc::opmode_t::kHeat: return kPanasonicAcHeat;
+    case stdAc::opmode_t::kDry:  return kPanasonicAcDry;
+    case stdAc::opmode_t::kFan:  return kPanasonicAcFan;
+    default:                     return kPanasonicAcAuto;
+  }
+}
+
+uint8_t IRPanasonicAc128::getTemp(void) {
+  return _.Temp + 4;
+}
+
+void IRPanasonicAc128::setTemp(const uint8_t degrees) {
+  uint8_t temp = std::max((uint8_t)kPanasonicAc128MinTemp, degrees);
+  temp         = std::min((uint8_t)kPanasonicAc128MaxTemp, temp);
+  if (getMode() == kPanasonicAcFan) temp = 24;
+  _.Temp = temp - 4;
+}
+
+uint8_t IRPanasonicAc128::getFan(void) {
+  return _.Fan;
+}
+
+void IRPanasonicAc128::setFan(const uint8_t speed) {
+  switch (speed) {
+    case kPanasonicAc128FanLow:
+    case kPanasonicAc128FanMed:
+    case kPanasonicAc128FanHigh:
+    case kPanasonicAc128FanAuto:
+      _.Fan = speed;
+      break;
+    default: _.Fan = kPanasonicAc128FanAuto;
+  }
+}
+
+uint8_t IRPanasonicAc128::convertFan(const stdAc::fanspeed_t speed) {
+  switch (speed) {
+    case stdAc::fanspeed_t::kMin:    return kPanasonicAc128FanLow;
+    case stdAc::fanspeed_t::kLow:    return kPanasonicAc128FanLow;
+    case stdAc::fanspeed_t::kMedium: return kPanasonicAc128FanMed;
+    case stdAc::fanspeed_t::kHigh:   return kPanasonicAc128FanHigh;
+    case stdAc::fanspeed_t::kMax:    return kPanasonicAc128FanHigh;
+    default:                         return kPanasonicAc128FanAuto;
+  }
+}
+
+uint8_t IRPanasonicAc128::getSwingVertical(void) {
+  return _.SwingV;
+}
+
+void IRPanasonicAc128::setSwingVertical(const uint8_t elevation) {
+  _.SwingV = elevation;
+}
+
+uint8_t IRPanasonicAc128::convertSwingV(const stdAc::swingv_t position) {
+  switch (position) {
+    case stdAc::swingv_t::kAuto:
+    case stdAc::swingv_t::kHighest:
+    case stdAc::swingv_t::kHigh:
+    case stdAc::swingv_t::kMiddle:
+    case stdAc::swingv_t::kLow:
+    case stdAc::swingv_t::kLowest: return (uint8_t)position;
+    case stdAc::swingv_t::kOff:    return kPanasonicAc128SwingVOff;
+    default:                       return kPanasonicAc128SwingVAuto;
+  }
+}
+
+bool IRPanasonicAc128::getSensor(void) {
+  return _.Sensor;
+}
+
+void IRPanasonicAc128::setSensor(const bool on) {
+  _.Sensor = on;
+}
+
+bool IRPanasonicAc128::getEcono(void) {
+  return _.Econo;
+}
+
+void IRPanasonicAc128::setEcono(const bool on) {
+  _.Econo = on;
+}
+
+bool IRPanasonicAc128::getIon(void) {
+  return _.Ion;
+}
+
+void IRPanasonicAc128::setIon(const bool on) {
+  _.Ion = on;
+}
+
+void IRPanasonicAc128::setFilter(const bool on) {}
+
+String IRPanasonicAc128::toString(void) {
+  ESP_LOGW("IR", "IRPanasonicAc128::toString");
+  String result = "";
+  result.reserve(180);  // Reserve some heap for the string to reduce fragging.
+  // result += addModelToString(decode_type_t::PANASONIC_AC128, getModel(), false);
+  result += addBoolToString(getPower(), kPowerStr);
+  result += addModeToString(getMode(), kPanasonicAcAuto, kPanasonicAcCool,
+                            kPanasonicAcHeat, kPanasonicAcDry, kPanasonicAcFan);
+  result += addTempToString(getTemp());
+  result += addFanToString(getFan(), kPanasonicAc128FanHigh, kPanasonicAc128FanLow,
+                           kPanasonicAc128FanAuto, kPanasonicAc128FanLow,
+                           kPanasonicAc128FanMed, kPanasonicAc128FanHigh);
+  result += addSwingVToString(getSwingVertical(), kPanasonicAc128SwingVAuto,
+                              kPanasonicAc128SwingVHighest,
+                              kPanasonicAc128SwingVHigh,
+                              kPanasonicAc128SwingVAuto,  // Upper Middle is unused
+                              kPanasonicAc128SwingVMiddle,
+                              kPanasonicAc128SwingVAuto,  // Lower Middle is unused
+                              kPanasonicAc128SwingVLow,
+                              kPanasonicAc128SwingVLowest,
+                              kPanasonicAc128SwingVOff,
+                              // Below are unused.
+                              kPanasonicAc128SwingVAuto,
+                              kPanasonicAc128SwingVAuto,
+                              kPanasonicAc128SwingVAuto);
+  // switch (getModel()) {
+  //   case kPanasonicJke:
+  //   case kPanasonicCkp:
+  //     break;  // No Horizontal Swing support.
+  //   default:
+  //     result += addSwingHToString(getSwingHorizontal(), kPanasonicAcSwingHAuto,
+  //                                 kPanasonicAcSwingHFullLeft,
+  //                                 kPanasonicAcSwingHLeft,
+  //                                 kPanasonicAcSwingHMiddle,
+  //                                 kPanasonicAcSwingHRight,
+  //                                 kPanasonicAcSwingHFullRight,
+  //                                 // Below are unused.
+  //                                 kPanasonicAcSwingHAuto,
+  //                                 kPanasonicAcSwingHAuto,
+  //                                 kPanasonicAcSwingHAuto,
+  //                                 kPanasonicAcSwingHAuto,
+  //                                 kPanasonicAcSwingHAuto);
+  // }
+  result += addBoolToString(getSensor(), kSensorStr);
+  result += addBoolToString(getIon(), kIonStr);
+  result += addBoolToString(getEcono(), kEconoStr);
+
+  return result;
+}
+
+stdAc::state_t IRPanasonicAc128::toCommon(void) {
+  ESP_LOGW("IR", "IRPanasonicAc128::toCommon");
+  stdAc::state_t result{};
+  result.protocol = decode_type_t::PANASONIC_AC128;
+  // result.model = getModel();
+  result.power = getPower();
+  // result.mode = toCommonMode(getMode());
+  result.celsius = true;
+  result.degrees = getTemp();
+  // result.fanspeed = toCommonFanSpeed(getFan());
+  // result.swingv = toCommonSwingV(getSwingVertical());
+  // result.swingh = toCommonSwingH(getSwingHorizontal());
+  // result.quiet = getQuiet();
+  // result.turbo = getPowerful();
+  // result.filter = getIon();
+  // // Not supported.
+  // result.econo = false;
+  // result.clean = false;
+  // result.light = false;
+  // result.beep = false;
+  // result.sleep = -1;
+  // result.clock = -1;
+  return result;
+}
+
+#if DECODE_PANASONIC_AC128
+/// Decode the supplied Panasonic AC 128bit message.
+/// Status: STABLE / Confirmed working.
+/// @param[in,out] results Ptr to the data to decode & where to store the decode
+///   result.
+/// @param[in] offset The starting index to use when attempting to decode the
+///   raw data. Typically/Defaults to kStartOffset.
+/// @param[in] nbits The number of data bits to expect.
+///   Typically: kPanasonicAc128Bits
+/// @param[in] strict Flag indicating if we should perform strict matching.
+/// @return A boolean. True if it can decode it, false if it can't.
+bool IRrecv::decodePanasonicAC128(decode_results *results, uint16_t offset,
+                                  const uint16_t nbits, const bool strict) {
+  if (strict && (nbits != kPanasonicAc128Bits))
+    return false;  // Not strictly a valid bit size.
+
+  // Determine if this is a long or a short message we are looking for.
+  // const bool is_long = (nbits > kPanasonicAc32Bits / 2);
+  // const uint16_t min_length = is_long ?
+  //     kPanasonicAc32Sections * kPanasonicAc32BlocksPerSection *
+  //     ((2 * nbits) + kHeader + kFooter) - 1 + offset :
+  //     (kPanasonicAc32BlocksPerSection + 1) * ((4 * nbits) + kHeader) +
+  //     kFooter - 1 + offset;
+
+  // if (results->rawlen < min_length)
+  //   return false;  // Can't possibly be a valid message.
+
+  // Match Header + Data #1 + Footer
+  uint16_t used;
+  used = matchGeneric(results->rawbuf + offset, results->state,
+                      results->rawlen - offset, kPanasonicAc128Bits,
+                      kPanasonicHdrMark, kPanasonicHdrSpace,
+                      kPanasonicBitMark, kPanasonicOneSpace,
+                      kPanasonicBitMark, kPanasonicZeroSpace,
+                      kPanasonicBitMark, kPanasonicAcSectionGap, false,
+                      kPanasonicAcTolerance, kPanasonicAcExcess, false);
+  if (!used) return false;
+  offset += used;
+
+  ESP_LOGW("IR", "Match Panasonic 128");
+  // Compliance
+  if (strict) {
+    // Check the signatures of the section blocks. They start with 0x02& 0x20.
+    if (results->state[0] != 0x02 || results->state[1] != 0x20 ||
+        results->state[8] != 0x02 || results->state[9] != 0x20)
+      return false;
+    if (!IRPanasonicAc::validChecksum(results->state, nbits / 8)) return false;
+  }
+
+  // Success
+  results->decode_type = decode_type_t::PANASONIC_AC128;
+  results->bits = nbits;
+  return true;
+}
+#endif  // DECODE_PANASONIC_AC128
+
+#if SEND_PANASONIC_AC128
+/// Send a Panasonic 128bit formatted message.
+/// Status: STABLE / Should be working.
+/// @param[in] data The message to be sent.
+/// @param[in] nbits The number of bits of message to be sent.
+/// @param[in] repeat The number of times the command is to be repeated.
+/// @note Use this method if you want to send the results of `decodePanasonicAC128`.
+void IRsend::sendPanasonicAC128(const unsigned char data[], const uint16_t nbytes,
+                              const uint16_t repeat) {
+  // sendGeneric(kPanasonicHdrMark, kPanasonicHdrSpace, kPanasonicBitMark,
+  //             kPanasonicOneSpace, kPanasonicBitMark, kPanasonicZeroSpace,
+  //             kPanasonicBitMark, kPanasonicMinGap, kPanasonicMinCommandLength,
+  //             data, nbits, kPanasonicFreq, true, repeat, 50);
+  
+  sendGeneric(kPanasonicHdrMark, kPanasonicHdrSpace,
+              kPanasonicBitMark, kPanasonicOneSpace,
+              kPanasonicBitMark, kPanasonicZeroSpace,
+              kPanasonicBitMark, kPanasonicMinGap,
+              data, nbytes, kPanasonicFreq, false, repeat, 50);
+}
+
+
+/// Send the current internal state as IR messages.
+/// @param[in] repeat Nr. of times the message will be repeated.
+void IRPanasonicAc128::send(const uint16_t repeat) {
+  _irsend.sendPanasonicAC128(getRaw(), kPanasonicAc128StateLength, repeat);
+}
+
+#endif  // SEND_PANASONIC_AC128
+/* Ninh.D.H 18.09.2023 ***************************************************************/
