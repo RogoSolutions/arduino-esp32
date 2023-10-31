@@ -1365,49 +1365,17 @@ void IRPanasonicAc128::setRaw(const uint8_t state[]) {
 }
 
 void IRPanasonicAc128::calcChecksum(void) {
-  // ToDo: wrong - remove
   _.Check1 = sumBytes(_.raw, 11, 0xCD);
-  if (getTemp() < 20) _.Check1 += 0x0F;
-  ESP_LOGW("IR", "Sum: %02X", _.Check1);
-
-  uint8_t check_reverse = 0;
-  for (uint16_t i=0x00; i<=0xFF; i++){
-    uint8_t sum = i;
-    uint32_t SUM = 0;
-    for (uint8_t i=0; i<11; i++){
-      sum += _.raw[i];
-      SUM += _.raw[i];
-    }
-    if (sum == _.Check1){
-      ESP_LOGW("IR", "CRC Init: 0x%02X", i);
-      ESP_LOGW("IR", "SUM: %d", SUM);
-      break;
-    }
-  }
-
-  // for (uint8_t i=0; i<16; i++){
-  //   check_reverse += _.raw[i];
-  // }
-  // if (getTemp() < 20) _.Check1 += 0x0F;
-  // ESP_LOGW("IR", "Sum0: %02X, Sum: %02X", check_reverse, _.Check1);
-
-  // for (uint16_t i=0x00; i<=0xFF; i++){
-  //   uint8_t sum = (uint8_t)(check_reverse + i);
-  //   if (sum == _.Check1){
-  //     ESP_LOGW("IR", "CRC Init: 0x%02X", i);
-  //     break;
-  //   }
-  // }
 
   switch (getMode()){
 
     case kPanasonicAcAuto: {
       if (getTemp() < 20) _.Check1 += 0x0F;
       _.Check2 = sumBytes(_.raw, 15, 0xCE);
-      if (getTemp() < 23 && getSwingVertical() == kPanasonicAc128SwingVAuto) _.Check2 += 0x0F;
-      if (getTemp() < 20 && getSwingVertical() != kPanasonicAc128SwingVAuto) _.Check2 += 0x0F;
-      // if ((getTemp() < 20 || getTemp() > 23) && getFan() != kPanasonicAc128FanAuto) _.Check2 -= 0x0F;
-      // if (getTemp() > 21 && getTemp() < 24 && getFan() == kPanasonicAc128FanMed) _.Check2 -= 0x0F;
+      if (getTemp() < 20) _.Check2 += 0x0F;
+      uint8_t check2Temp = _.Check2;
+      if (check2Temp >= 0x40 && check2Temp <= 0x4F) _.Check2 += 0x0F;
+      if (check2Temp >= 0x70 && check2Temp <= 0x8F) _.Check2 -= 0x0F;
       break;
     }
 
@@ -1418,47 +1386,54 @@ void IRPanasonicAc128::calcChecksum(void) {
       if (getTemp() < 28) { _.Check1 += 0x0F; }
       if (getTemp() < 20) _.Check1 += 0x0F;
       _.Check2 = sumBytes(_.raw, 15, 0xCE);
-      _.Check2 += 0x0F;
-      _.Check2 += 0x0F;
-      _.Check2 += 0x0F;
+      _.Check2 += 4*0x0F;
       if (getTemp() < 28) { _.Check2 += 0x0F; }
       if (getTemp() < 20) { _.Check2 += 0x0F; }
-      if (getTemp() > 20 && getSwingVertical() == kPanasonicAc128SwingVAuto)
-        _.Check2 += 0x0F;
+      uint8_t check2Temp = _.Check2;
+      if (check2Temp >= 0x60 && check2Temp <= 0x7F) _.Check2 -= 0x0F;
+      if (check2Temp >= 0x80 && check2Temp <= 0x8F) _.Check2 -= 2*0x0F;
       break;
     }
 
     case kPanasonicAcDry: {
-      _.Check1 -= 0x0F;
-      _.Check1 -= 0x0F;
-      _.Check1 -= 0x0F;
-      _.Check1 -= 0x0F;
+      _.Check1 -= 4*0x0F;
       if (getTemp() < 20) _.Check1 += 0x0F;
+      if (getTemp() > 27) _.Check1 -= 0x0F;
       _.Check2 = sumBytes(_.raw, 15, 0xCE);
-      _.Check2 -= 0x0F;
-      _.Check2 -= 0x0F;
-      _.Check2 -= 0x0F;
-      _.Check2 -= 0x0F;
-      if (getTemp() > 19 && getSwingVertical() != kPanasonicAc128SwingVAuto) _.Check2 -= 0x0F;
-      if (getTemp() > 22 && getSwingVertical() == kPanasonicAc128SwingVAuto) _.Check2 -= 0x0F;
-      if (getFan() != kPanasonicAc128FanMed && getSwingVertical() == kPanasonicAc128SwingVAuto) _.Check2 += 0x0F;
+      _.Check2 -= 4*0x0F;
+      if (getTemp() < 20) _.Check2 += 0x0F;
+      if (getTemp() > 27) _.Check2 -= 0x0F;
+      uint8_t check2Temp = _.Check2;
+      if (check2Temp >= 0x70 && check2Temp <= 0x8F) _.Check2 -= 0x0F;
+      if (check2Temp >= 0x40 && check2Temp <= 0x4F) _.Check2 += 0x0F;
       break;
     }
 
     case kPanasonicAcCool: {
       if (getTemp() < 20) _.Check1 += 0x0F;
+      if (getTemp() > 27) _.Check1 -= 0x0F;
       _.Check2 = sumBytes(_.raw, 15, 0xCE);
-      if (getTemp() > 22) _.Check2 -= 0x0F;
+      if (getTemp() < 20) _.Check2 += 0x0F;
+      if (getTemp() > 27) _.Check2 -= 0x0F;
+      uint8_t check2Temp = _.Check2;
+      if (check2Temp >= 0x40 && check2Temp <= 0x4F) _.Check2 += 0x0F;
+      if (check2Temp >= 0x70 && check2Temp <= 0x8F) _.Check2 -= 0x0F;
+      break;
+    }
+
+    case kPanasonicAcFan: {
+      _.Check1 += 8*0x0F;
+      _.Check2 = sumBytes(_.raw, 15, 0xCE);
+      _.Check2 += 8*0x0F;
+      if (_.Check2 >= 0x40 && _.Check2 <= 0x4F) _.Check2 += 0x0F;
       break;
     }
 
     default: {
-      _.Check1 += 8*0x0F;
-      _.Check2 = sumBytes(_.raw, 15, 0xCE);
-      _.Check2 += 7*0x0F;
       break;
     }
   }
+  ESP_LOGW("IR", "Check1: %02X, Check2: %02X", _.Check1, _.Check2);
 }
 
 uint8_t* IRPanasonicAc128::getRaw(void) {
@@ -1477,6 +1452,16 @@ void IRPanasonicAc128::setPower(const bool on, const int16_t type) {
     else _.Type = 2;
   }
   else { _.Type = 1; }
+}
+
+stdAc::opmode_t IRPanasonicAc128::toCommonMode(const uint8_t mode) {
+  switch (mode) {
+    case kPanasonicAcCool: return stdAc::opmode_t::kCool;
+    case kPanasonicAcHeat: return stdAc::opmode_t::kHeat;
+    case kPanasonicAcDry:  return stdAc::opmode_t::kDry;
+    case kPanasonicAcFan:  return stdAc::opmode_t::kFan;
+    default:               return stdAc::opmode_t::kAuto;
+  }
 }
 
 uint8_t IRPanasonicAc128::getMode(void) {
@@ -1549,6 +1534,15 @@ void IRPanasonicAc128::setTemp(const uint8_t degrees) {
   _.Temp = temp - 4;
 }
 
+stdAc::fanspeed_t IRPanasonicAc128::toCommonFanSpeed(const uint8_t speed) {
+  switch (speed) {
+    case kPanasonicAc128FanHigh:    return stdAc::fanspeed_t::kHigh;
+    case kPanasonicAc128FanMed:     return stdAc::fanspeed_t::kMedium;
+    case kPanasonicAc128FanLow:     return stdAc::fanspeed_t::kLow;
+    default:                        return stdAc::fanspeed_t::kAuto;
+  }
+}
+
 uint8_t IRPanasonicAc128::getFan(void) {
   return _.Fan;
 }
@@ -1574,6 +1568,13 @@ uint8_t IRPanasonicAc128::convertFan(const stdAc::fanspeed_t speed) {
     case stdAc::fanspeed_t::kMax:    return kPanasonicAc128FanHigh;
     default:                         return kPanasonicAc128FanAuto;
   }
+}
+
+stdAc::swingv_t IRPanasonicAc128::toCommonSwingV(const uint8_t pos) {
+  if (pos >= kPanasonicAc128SwingVHighest && pos <= kPanasonicAc128SwingVLowest)
+    return (stdAc::swingv_t)pos;
+  else if (pos == kPanasonicAc128SwingVOff) return stdAc::swingv_t::kOff;
+  else                                      return stdAc::swingv_t::kAuto;
 }
 
 uint8_t IRPanasonicAc128::getSwingVertical(void) {
@@ -1624,7 +1625,6 @@ void IRPanasonicAc128::setIon(const bool on) {
 void IRPanasonicAc128::setFilter(const bool on) {}
 
 String IRPanasonicAc128::toString(void) {
-  ESP_LOGW("IR", "IRPanasonicAc128::toString");
   String result = "";
   result.reserve(180);  // Reserve some heap for the string to reduce fragging.
   // result += addModelToString(decode_type_t::PANASONIC_AC128, getModel(), false);
@@ -1674,22 +1674,21 @@ String IRPanasonicAc128::toString(void) {
 }
 
 stdAc::state_t IRPanasonicAc128::toCommon(void) {
-  ESP_LOGW("IR", "IRPanasonicAc128::toCommon");
   stdAc::state_t result{};
   result.protocol = decode_type_t::PANASONIC_AC128;
   // result.model = getModel();
   result.power = getPower();
-  // result.mode = toCommonMode(getMode());
+  result.mode = toCommonMode(getMode());
   result.celsius = true;
   result.degrees = getTemp();
-  // result.fanspeed = toCommonFanSpeed(getFan());
-  // result.swingv = toCommonSwingV(getSwingVertical());
+  result.fanspeed = toCommonFanSpeed(getFan());
+  result.swingv = toCommonSwingV(getSwingVertical());
+  // result.filter = getIon();
+  result.econo = getEcono();
+  // // Not supported.
+  // result.turbo = getPowerful();
   // result.swingh = toCommonSwingH(getSwingHorizontal());
   // result.quiet = getQuiet();
-  // result.turbo = getPowerful();
-  // result.filter = getIon();
-  // // Not supported.
-  // result.econo = false;
   // result.clean = false;
   // result.light = false;
   // result.beep = false;
