@@ -1076,7 +1076,6 @@ void IRsend::sendMitsubishiHeavy160(const unsigned char data[],
               kMitsubishiHeavy160BitMark, kMitsubishiHeavy160Gap,
               data, nbytes, 38000, false, repeat, kDutyDefault);
 }
-#endif // SEND_MITSUBISHIHEAVY160
 
 // Class for decoding and constructing MitsubishiHeavy160 AC messages.
 
@@ -1092,14 +1091,13 @@ IRMitsubishiHeavy160Ac::IRMitsubishiHeavy160Ac(const uint16_t pin,
 /// Set up hardware to be able to send a message.
 void IRMitsubishiHeavy160Ac::begin(void) { _irsend.begin(); }
 
-#if SEND_MITSUBISHIHEAVY
 /// Send the current internal state as an IR message.
 /// @param[in] repeat Nr. of times the message will be repeated.
 void IRMitsubishiHeavy160Ac::send(const uint16_t repeat) {
   _irsend.sendMitsubishiHeavy160(getRaw(), kMitsubishiHeavy160StateLength,
                                  repeat);
 }
-#endif  // SEND_MITSUBISHIHEAVY
+#endif  // SEND_MITSUBISHIHEAVY160
 
 /// Reset the state of the remote to a known good state/sequence.
 void IRMitsubishiHeavy160Ac::stateReset(void) {
